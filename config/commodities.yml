@@ -1,98 +1,223 @@
-# Liste provisoire des matières premières.
-# À valider pendant l'étape 0 de cadrage.
+# Univers des matières premières.
+# Les priorités A et B sont activées pour rester dans le périmètre MVP de 10 à 15 instruments.
+# Les priorités C restent documentées mais désactivées par défaut.
 commodities:
-  - symbol: GC=F
-    name: Gold Futures
-    label_fr: Or
-    category: precious_metals
-    currency: USD
-    source: yahoo_finance
-    enabled: true
-
-  - symbol: SI=F
-    name: Silver Futures
-    label_fr: Argent
-    category: precious_metals
-    currency: USD
-    source: yahoo_finance
-    enabled: true
-
-  - symbol: PL=F
-    name: Platinum Futures
-    label_fr: Platine
-    category: precious_metals
-    currency: USD
-    source: yahoo_finance
-    enabled: true
-
-  - symbol: CL=F
+  - commodity_id: WTI
+    symbol: CL=F
     name: Crude Oil WTI Futures
     label_fr: Pétrole WTI
     category: energy
+    priority: A
     currency: USD
     source: yahoo_finance
+    rss_query: '"WTI crude oil" OR "US crude oil" OR OPEC OR "oil inventories"'
     enabled: true
 
-  - symbol: BZ=F
-    name: Brent Crude Oil Futures
-    label_fr: Brent
+  - commodity_id: GOLD
+    symbol: GC=F
+    name: Gold Futures
+    label_fr: Or
+    category: precious_metals
+    priority: A
+    currency: USD
+    source: yahoo_finance
+    rss_query: '"gold price" OR bullion OR "central bank gold" OR "real yields"'
+    enabled: true
+
+  - commodity_id: NATURAL_GAS
+    symbol: NG=F
+    name: Natural Gas Henry Hub Futures
+    label_fr: Gaz naturel Henry Hub
     category: energy
+    priority: A
     currency: USD
     source: yahoo_finance
+    rss_query: '"Henry Hub" OR "natural gas storage" OR LNG OR "gas inventories"'
     enabled: true
 
-  - symbol: NG=F
-    name: Natural Gas Futures
-    label_fr: Gaz naturel
-    category: energy
-    currency: USD
-    source: yahoo_finance
-    enabled: true
-
-  - symbol: HG=F
+  - commodity_id: COPPER
+    symbol: HG=F
     name: Copper Futures
     label_fr: Cuivre
     category: industrial_metals
+    priority: A
     currency: USD
     source: yahoo_finance
+    rss_query: '"copper price" OR "copper inventories" OR "copper mine" OR "China copper"'
     enabled: true
 
-  - symbol: ZW=F
-    name: Wheat Futures
-    label_fr: Blé
+  - commodity_id: WHEAT
+    symbol: ZW=F
+    name: Wheat Chicago SRW Futures
+    label_fr: Blé Chicago SRW
     category: agriculture
+    priority: A
     currency: USD
     source: yahoo_finance
+    rss_query: '"wheat prices" OR "wheat harvest" OR "Black Sea wheat" OR "wheat exports"'
     enabled: true
 
-  - symbol: ZC=F
+  - commodity_id: CORN
+    symbol: ZC=F
     name: Corn Futures
     label_fr: Maïs
     category: agriculture
+    priority: A
     currency: USD
     source: yahoo_finance
+    rss_query: '"corn prices" OR "corn harvest" OR "corn crop" OR ethanol USDA'
     enabled: true
 
-  - symbol: ZS=F
+  - commodity_id: COCOA
+    symbol: CC=F
+    name: Cocoa Futures
+    label_fr: Cacao
+    category: soft_commodities
+    priority: A
+    currency: USD
+    source: yahoo_finance
+    rss_query: '"cocoa prices" OR "cocoa crop" OR "Ivory Coast cocoa" OR "Ghana cocoa"'
+    enabled: true
+
+  - commodity_id: COFFEE
+    symbol: KC=F
+    name: Coffee Arabica Futures
+    label_fr: Café Arabica
+    category: soft_commodities
+    priority: A
+    currency: USD
+    source: yahoo_finance
+    rss_query: '"arabica coffee" OR "coffee prices" OR "Brazil coffee crop" OR "coffee frost"'
+    enabled: true
+
+  - commodity_id: BRENT
+    symbol: BZ=F
+    name: Brent Crude Oil Futures
+    label_fr: Pétrole Brent
+    category: energy
+    priority: B
+    currency: USD
+    source: yahoo_finance
+    rss_query: '"Brent crude" OR "Brent oil" OR OPEC OR "global oil supply"'
+    enabled: true
+
+  - commodity_id: SILVER
+    symbol: SI=F
+    name: Silver Futures
+    label_fr: Argent
+    category: precious_metals
+    priority: B
+    currency: USD
+    source: yahoo_finance
+    rss_query: '"silver price" OR "silver demand" OR "silver market" OR "solar silver"'
+    enabled: true
+
+  - commodity_id: SOYBEAN
+    symbol: ZS=F
     name: Soybean Futures
     label_fr: Soja
     category: agriculture
+    priority: B
     currency: USD
     source: yahoo_finance
+    rss_query: '"soybean prices" OR "soybean crop" OR "Brazil soybeans" OR "China soybean imports"'
     enabled: true
 
-  - symbol: KC=F
-    name: Coffee Futures
-    label_fr: Café
-    category: agriculture
+  - commodity_id: SUGAR
+    symbol: SB=F
+    name: Sugar No. 11 Futures
+    label_fr: Sucre No. 11
+    category: soft_commodities
+    priority: B
     currency: USD
     source: yahoo_finance
+    rss_query: '"sugar prices" OR "Brazil sugar" OR "India sugar exports" OR "sugar crop"'
     enabled: true
 
-  - symbol: SB=F
-    name: Sugar Futures
-    label_fr: Sucre
-    category: agriculture
+  - commodity_id: PLATINUM
+    symbol: PL=F
+    name: Platinum Futures
+    label_fr: Platine
+    category: precious_metals
+    priority: C
     currency: USD
     source: yahoo_finance
-    enabled: true
+    rss_query: '"platinum price" OR "platinum supply" OR "South Africa platinum" OR hydrogen'
+    enabled: false
+
+  - commodity_id: PALLADIUM
+    symbol: PA=F
+    name: Palladium Futures
+    label_fr: Palladium
+    category: precious_metals
+    priority: C
+    currency: USD
+    source: yahoo_finance
+    rss_query: '"palladium price" OR "palladium supply" OR "Russia palladium" OR autocatalyst'
+    enabled: false
+
+  - commodity_id: COTTON
+    symbol: CT=F
+    name: Cotton Futures
+    label_fr: Coton
+    category: agriculture
+    priority: C
+    currency: USD
+    source: yahoo_finance
+    rss_query: '"cotton prices" OR "cotton crop" OR "cotton harvest" OR "China cotton"'
+    enabled: false
+
+  - commodity_id: ORANGE_JUICE
+    symbol: OJ=F
+    name: Orange Juice Futures
+    label_fr: Jus d'orange concentré
+    category: soft_commodities
+    priority: C
+    currency: USD
+    source: yahoo_finance
+    rss_query: '"orange juice" OR "citrus crop" OR "Florida citrus" OR "Brazil orange" OR "citrus greening"'
+    enabled: false
+
+  - commodity_id: ROUGH_RICE
+    symbol: ZR=F
+    name: Rough Rice Futures
+    label_fr: Riz brut
+    category: agriculture
+    priority: C
+    currency: USD
+    source: yahoo_finance
+    rss_query: '"rice prices" OR "rice exports" OR "rice harvest" OR "rice reserves" OR "India rice ban"'
+    enabled: false
+
+  - commodity_id: LUMBER
+    symbol: LBR=F
+    name: Lumber Futures
+    label_fr: Bois d'œuvre
+    category: materials
+    priority: C
+    currency: USD
+    source: yahoo_finance
+    rss_query: '"lumber prices" OR "lumber futures" OR "housing starts" OR "softwood lumber" OR "Canada lumber"'
+    enabled: false
+
+  - commodity_id: OLIVE_OIL_PROXY
+    symbol: CBO.AX
+    name: Olive Oil Proxy ETF ASX
+    label_fr: Huile d'olive proxy ETF ASX
+    category: agriculture
+    priority: C
+    currency: AUD
+    source: yahoo_finance
+    rss_query: '"olive oil prices" OR "olive harvest" OR "olive crop" OR "Spain olive" OR "drought olive"'
+    enabled: false
+
+  - commodity_id: LITHIUM_HYDROXIDE
+    symbol: LTH=F
+    name: Lithium Hydroxide Futures
+    label_fr: Lithium hydroxyde futures
+    category: industrial_metals
+    priority: C
+    currency: USD
+    source: yahoo_finance
+    rss_query: '"lithium hydroxide" OR "lithium price" OR "battery metals" OR "EV lithium demand" OR "lithium supply"'
+    enabled: false
