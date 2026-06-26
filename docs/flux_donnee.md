@@ -148,6 +148,31 @@ raw.market_data_raw
 
 ## 4. Flux benchmarks
 
+Un benchmark est une référence de comparaison.
+
+Dans ce projet, il ne sert pas à prendre une décision d'achat ou de vente. Il sert à répondre à une question simple :
+
+> Est-ce que ma stratégie fait mieux qu'une méthode de référence simple ?
+
+Il y a deux familles de benchmarks dans le projet :
+
+| Benchmark | Rôle | Exemple |
+| --- | --- | --- |
+| Buy and Hold | Acheter une matière première au début de la période et la garder jusqu'à la fin. | Acheter `GC=F` en 2020 et conserver jusqu'à J-1. |
+| Benchmark global | Représenter le marché global des matières premières. | ETF ou indice diversifié comme `DBC`. |
+
+Exemple :
+
+```text
+Si une stratégie sur l'or gagne +18 %, mais que Buy and Hold sur l'or gagne +25 %,
+alors la stratégie est moins intéressante que simplement acheter et conserver l'or.
+
+Si une stratégie gagne +18 %, mais que le benchmark global commodities gagne +8 %,
+alors elle surperforme le marché global des matières premières.
+```
+
+Le benchmark est donc une base de comparaison, pas une source de signal.
+
 ### 4.1 Configuration
 
 Les benchmarks sont définis dans :
@@ -163,8 +188,15 @@ benchmarks:
   global:
     symbol: DBC
     name: Invesco DB Commodity Index Tracking Fund
-  per_commodity_buy_and_hold: true
+
+  buy_and_hold:
+    enabled: true
 ```
+
+Dans cet exemple :
+
+- `DBC` représente le benchmark global ;
+- `buy_and_hold.enabled: true` indique que chaque matière première sera aussi comparée à sa propre performance passive.
 
 ### 4.2 Extraction
 
@@ -178,7 +210,7 @@ Rôle du script :
 
 1. lire `config/benchmarks.yml` ;
 2. récupérer le benchmark global via Yahoo Finance ;
-3. récupérer les données nécessaires aux comparaisons Buy and Hold ;
+3. récupérer les données de prix nécessaires aux comparaisons ;
 4. normaliser les champs ;
 5. écrire un CSV local.
 
@@ -187,6 +219,39 @@ Fichier produit :
 ```text
 data/raw/benchmarks/benchmarks_YYYYMMDD.csv
 ```
+
+Exemple de contenu :
+
+```csv
+benchmark_id,benchmark_type,symbol,date,open,high,low,close,adjusted_close,volume,source,ingested_at
+global_dbc,global,DBC,2024-01-02,22.10,22.31,22.05,22.25,22.25,1530000,yahoo_finance,2026-06-26T08:00:00Z
+global_dbc,global,DBC,2024-01-03,22.25,22.40,22.12,22.18,22.18,1480000,yahoo_finance,2026-06-26T08:00:00Z
+buy_hold_gc,buy_and_hold,GC=F,2024-01-02,2072.70,2088.10,2065.20,2078.40,2078.40,145321,yahoo_finance,2026-06-26T08:00:00Z
+buy_hold_gc,buy_and_hold,GC=F,2024-01-03,2078.40,2082.90,2048.00,2055.70,2055.70,151884,yahoo_finance,2026-06-26T08:00:00Z
+```
+
+Schéma attendu :
+
+```text
+benchmark_id
+benchmark_type
+symbol
+date
+open
+high
+low
+close
+adjusted_close
+volume
+source
+ingested_at
+```
+
+Différence avec `market_data_raw` :
+
+- `market_data_raw` contient les prix des instruments étudiés pour générer indicateurs et signaux ;
+- `benchmarks_raw` contient les prix des références utilisées pour comparer les résultats ;
+- une même matière première peut apparaître dans les deux logiques : comme instrument tradé dans `market_data_raw`, et comme référence Buy and Hold dans `benchmarks_raw`.
 
 ### 4.3 Chargement vers BigQuery
 
@@ -201,6 +266,21 @@ Table BigQuery cible :
 ```text
 raw.benchmarks_raw
 ```
+
+Utilisation après chargement :
+
+```text
+raw.benchmarks_raw
+→ stg_benchmarks
+→ mart_strategy_metrics
+→ dashboard/pages/06_comparison.py
+```
+
+Le backtesting utilise ensuite ces données pour calculer :
+
+- la performance du benchmark sur la même période ;
+- la surperformance ou sous-performance de la stratégie ;
+- les graphiques de comparaison entre stratégie, Buy and Hold et benchmark global.
 
 ---
 
@@ -280,6 +360,59 @@ raw.news_raw
 
 Les données textuelles chargées dans BigQuery sont ensuite enrichies par les scripts NLP.
 
+Point important : **FinBERT et les embeddings ne sont pas calculés directement dans dbt**.
+
+dbt est excellent pour transformer des tables avec du SQL : nettoyer, typer, joindre, dédupliquer, agréger. En revanche, charger un modèle NLP comme FinBERT ou Sentence Transformers est un traitement Python.
+
+Dans ce projet, la séparation recommandée est donc :
+
+| Étape | Outil | Rôle |
+| --- | --- | --- |
+| Nettoyage simple des articles | dbt Staging | Préparer `stg_news` depuis `raw.news_raw`. |
+| Embeddings | Python | Charger Sentence Transformers et écrire les vecteurs. |
+| Sentiment FinBERT | Python | Charger FinBERT et calculer les probabilités positive, neutre, négative. |
+| Pertinence article-matière première | Python | Comparer les embeddings article et commodity. |
+| Agrégation finale | dbt Warehouse | Construire les indicateurs journaliers par matière première. |
+| Exposition dashboard/backtesting | dbt Marts | Produire les tables finales propres. |
+
+Le flux recommandé est donc hybride :
+
+```text
+raw.news_raw
+→ dbt staging : stg_news
+→ scripts Python NLP lisent stg_news
+→ scripts Python NLP écrivent des tables raw NLP
+→ dbt warehouse lit ces tables raw NLP
+→ dbt marts expose les résultats
+```
+
+Pourquoi ne pas écrire directement dans `dbt_finance` ou `mart` depuis Python ?
+
+- pour garder dbt responsable des tables transformées ;
+- pour éviter que Python et dbt modifient les mêmes tables ;
+- pour conserver une séparation claire entre résultats bruts de modèles et tables métier ;
+- pour pouvoir rejouer dbt sans relancer FinBERT à chaque fois.
+
+Les scripts Python NLP écrivent donc plutôt dans des tables brutes ou semi-brutes :
+
+```text
+raw.news_embeddings_raw
+raw.news_sentiment_raw
+raw.article_commodity_relevance_raw
+raw.news_features_raw
+```
+
+Puis dbt construit les modèles :
+
+```text
+stg_news_embeddings
+stg_news_sentiment
+stg_article_commodity_relevance
+int_commodity_news_features
+mart_dashboard_overview
+mart_strategy_signals
+```
+
 ### 6.1 Embeddings
 
 Script responsable :
@@ -291,7 +424,7 @@ scripts/nlp/create_embeddings.py
 Entrée :
 
 ```text
-raw.news_raw
+stg_news
 ```
 
 Sortie possible :
@@ -302,7 +435,7 @@ raw.news_embeddings_raw
 
 Rôle du script :
 
-1. lire les articles sans embedding ;
+1. lire les articles nettoyés sans embedding depuis `stg_news` ;
 2. générer un vecteur avec le modèle défini dans `.env` ;
 3. historiser le modèle et sa version ;
 4. éviter de recalculer les embeddings déjà présents.
@@ -358,7 +491,57 @@ calculated_at
 
 ### 6.3 Sentiment et indicateurs textuels
 
-Script responsable :
+Deux traitements sont à distinguer :
+
+1. le sentiment FinBERT, fait en Python ;
+2. l'agrégation finale des indicateurs textuels, faite de préférence avec dbt.
+
+Script responsable du sentiment :
+
+```text
+scripts/nlp/compute_sentiment.py
+```
+
+Entrée :
+
+```text
+stg_news
+```
+
+Sortie possible :
+
+```text
+raw.news_sentiment_raw
+```
+
+Rôle du script :
+
+1. lire les articles nettoyés depuis `stg_news` ;
+2. charger un modèle FinBERT ou équivalent financier ;
+3. calculer `positive_probability`, `neutral_probability` et `negative_probability` ;
+4. calculer `sentiment_score` ;
+5. écrire les résultats dans BigQuery.
+
+Formule recommandée :
+
+```text
+sentiment_score = positive_probability - negative_probability
+```
+
+Schéma attendu :
+
+```text
+article_id
+positive_probability
+neutral_probability
+negative_probability
+sentiment_score
+sentiment_model
+sentiment_model_version
+calculated_at
+```
+
+Script responsable de la préparation des features textuelles :
 
 ```text
 scripts/nlp/compute_news_indicators.py
@@ -367,8 +550,9 @@ scripts/nlp/compute_news_indicators.py
 Entrées :
 
 ```text
-raw.news_raw
+stg_news
 raw.news_embeddings_raw
+raw.news_sentiment_raw
 raw.article_commodity_relevance_raw
 ```
 
@@ -380,10 +564,10 @@ raw.news_features_raw
 
 Rôle du script :
 
-1. calculer le sentiment financier ;
-2. calculer la nouveauté ;
-3. agréger les scores par matière première et par date ;
-4. produire les indicateurs textuels consommés par dbt.
+1. calculer la nouveauté ;
+2. préparer les scores article-matière première ;
+3. produire des features textuelles brutes ou semi-agrégées ;
+4. laisser dbt construire `int_commodity_news_features`.
 
 Indicateurs attendus :
 
@@ -598,14 +782,18 @@ Ordre d'exécution cible :
 2. scripts/extract_load/ingest_benchmarks.py
 3. scripts/extract_load/ingest_rss.py
 4. scripts/extract_load/load_to_bigquery.py
-5. scripts/nlp/create_embeddings.py
-6. scripts/nlp/compute_relevance.py
-7. scripts/nlp/compute_news_indicators.py
-8. dbt run
-9. dbt test
-10. backtesting/engine.py
-11. écriture du statut final du pipeline
+5. dbt run --select models/landing models/staging
+6. scripts/nlp/create_embeddings.py
+7. scripts/nlp/compute_sentiment.py
+8. scripts/nlp/compute_relevance.py
+9. scripts/nlp/compute_news_indicators.py
+10. dbt run --select models/warehouse models/marts
+11. dbt test
+12. backtesting/engine.py
+13. écriture du statut final du pipeline
 ```
+
+Cette organisation permet aux scripts NLP de lire des articles déjà nettoyés dans `stg_news`, tout en laissant dbt construire les tables analytiques finales.
 
 Chaque étape doit produire un log :
 
@@ -664,13 +852,16 @@ Exemple : article RSS sur le pétrole.
 4. Il calcule article_id et content_hash.
 5. Il écrit data/raw/news/news_20260626.csv.
 6. scripts/extract_load/load_to_bigquery.py charge le CSV dans raw.news_raw.
-7. scripts/nlp/create_embeddings.py génère l'embedding de l'article.
-8. scripts/nlp/compute_relevance.py compare l'article aux matières premières.
-9. scripts/nlp/compute_news_indicators.py calcule sentiment, nouveauté et news_pressure_score.
-10. dbt prépare int_commodity_news_features.
-11. dbt alimente mart_strategy_signals et mart_dashboard_overview.
-12. La stratégie technical_news_filter utilise le signal textuel.
-13. dashboard/pages/03_news_indicators.py affiche la pression des actualités.
+7. dbt crée stg_news avec les articles nettoyés et typés.
+8. scripts/nlp/create_embeddings.py lit stg_news et génère l'embedding de l'article.
+9. scripts/nlp/compute_sentiment.py lit stg_news et calcule le score FinBERT.
+10. scripts/nlp/compute_relevance.py compare l'article aux matières premières.
+11. scripts/nlp/compute_news_indicators.py prépare nouveauté et features textuelles.
+12. Les scripts NLP écrivent leurs résultats dans des tables raw NLP.
+13. dbt prépare int_commodity_news_features depuis ces tables raw NLP.
+14. dbt alimente mart_strategy_signals et mart_dashboard_overview.
+15. La stratégie technical_news_filter utilise le signal textuel.
+16. dashboard/pages/03_news_indicators.py affiche la pression des actualités.
 ```
 
 ---
@@ -694,6 +885,7 @@ raw.market_data_raw
 raw.benchmarks_raw
 raw.news_raw
 raw.news_embeddings_raw
+raw.news_sentiment_raw
 raw.article_commodity_relevance_raw
 raw.news_features_raw
 raw.pipeline_logs_raw

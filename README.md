@@ -150,7 +150,7 @@ BigQuery dbt_finance / mart
 
 - `TASK.md` contient le backlog opérationnel.
 - `docs/flux_donnee.md` explique le trajet de la donnée, des APIs jusqu'au dashboard.
-- `docs/pedagogie.md` explique le rôle des fichiers `.yml` de configuration.
+- `docs/pedagogie.md` explique comment configurer Terraform avec Google Cloud BigQuery.
 - `Note de cadrage.md` décrit le périmètre et la méthodologie.
 - `Cahier des charges.md` décrit les exigences techniques.
 - `Cahier des charges fonctionnel.md` décrit les fonctions attendues.

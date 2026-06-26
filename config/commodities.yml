@@ -1,0 +1,98 @@
+# Liste provisoire des matières premières.
+# À valider pendant l'étape 0 de cadrage.
+commodities:
+  - symbol: GC=F
+    name: Gold Futures
+    label_fr: Or
+    category: precious_metals
+    currency: USD
+    source: yahoo_finance
+    enabled: true
+
+  - symbol: SI=F
+    name: Silver Futures
+    label_fr: Argent
+    category: precious_metals
+    currency: USD
+    source: yahoo_finance
+    enabled: true
+
+  - symbol: PL=F
+    name: Platinum Futures
+    label_fr: Platine
+    category: precious_metals
+    currency: USD
+    source: yahoo_finance
+    enabled: true
+
+  - symbol: CL=F
+    name: Crude Oil WTI Futures
+    label_fr: Pétrole WTI
+    category: energy
+    currency: USD
+    source: yahoo_finance
+    enabled: true
+
+  - symbol: BZ=F
+    name: Brent Crude Oil Futures
+    label_fr: Brent
+    category: energy
+    currency: USD
+    source: yahoo_finance
+    enabled: true
+
+  - symbol: NG=F
+    name: Natural Gas Futures
+    label_fr: Gaz naturel
+    category: energy
+    currency: USD
+    source: yahoo_finance
+    enabled: true
+
+  - symbol: HG=F
+    name: Copper Futures
+    label_fr: Cuivre
+    category: industrial_metals
+    currency: USD
+    source: yahoo_finance
+    enabled: true
+
+  - symbol: ZW=F
+    name: Wheat Futures
+    label_fr: Blé
+    category: agriculture
+    currency: USD
+    source: yahoo_finance
+    enabled: true
+
+  - symbol: ZC=F
+    name: Corn Futures
+    label_fr: Maïs
+    category: agriculture
+    currency: USD
+    source: yahoo_finance
+    enabled: true
+
+  - symbol: ZS=F
+    name: Soybean Futures
+    label_fr: Soja
+    category: agriculture
+    currency: USD
+    source: yahoo_finance
+    enabled: true
+
+  - symbol: KC=F
+    name: Coffee Futures
+    label_fr: Café
+    category: agriculture
+    currency: USD
+    source: yahoo_finance
+    enabled: true
+
+  - symbol: SB=F
+    name: Sugar Futures
+    label_fr: Sucre
+    category: agriculture
+    currency: USD
+    source: yahoo_finance
+    enabled: true

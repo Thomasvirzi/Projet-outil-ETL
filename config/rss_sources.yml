@@ -1,0 +1,20 @@
+# Sources RSS provisoires.
+# Remplacer les URLs si une source retenue change pendant le cadrage.
+rss_sources:
+  - name: Yahoo Finance Commodities
+    url: https://finance.yahoo.com/news/rssindex
+    category: finance
+    language: en
+    enabled: true
+
+  - name: Investing Commodities News
+    url: https://www.investing.com/rss/news_11.rss
+    category: commodities
+    language: en
+    enabled: true
+
+  - name: OilPrice News
+    url: https://oilprice.com/rss/main
+    category: energy
+    language: en
+    enabled: true

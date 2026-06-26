@@ -3,7 +3,7 @@ PIP ?= pip
 DBT_DIR := dbt_finance
 TF_DIR := infrastructure
 
-.PHONY: install infra-init infra-validate infra-plan infra-apply ingest dbt-run dbt-test backtest dashboard test
+.PHONY: install infra-init infra-validate infra-plan infra-apply infra-destroy ingest dbt-run dbt-test backtest dashboard test
 
 install:
 	$(PIP) install -r requirements/requirements.txt
@@ -19,6 +19,9 @@ infra-plan:
 
 infra-apply:
 	terraform -chdir=$(TF_DIR) apply -var-file=environments/dev.tfvars
+
+infra-destroy:
+	terraform -chdir=$(TF_DIR) destroy -var-file=environments/dev.tfvars
 
 ingest:
 	$(PYTHON) scripts/orchestrate.py --only ingest

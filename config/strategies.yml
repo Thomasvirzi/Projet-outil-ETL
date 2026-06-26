@@ -1,0 +1,31 @@
+defaults:
+  initial_capital: 100000
+  transaction_fee_rate: 0.001
+  slippage_rate: 0.0005
+  execution_lag_days: 1
+  allow_short_selling: false
+
+strategies:
+  buy_and_hold:
+    enabled: true
+    description: "Achat au début de la période et conservation jusqu'à la fin."
+
+  moving_average:
+    enabled: true
+    short_window: 20
+    long_window: 50
+
+  moving_average_stoch_rsi:
+    enabled: true
+    short_window: 20
+    long_window: 50
+    stoch_rsi_window: 14
+    stoch_rsi_buy_threshold: 0.2
+    stoch_rsi_sell_threshold: 0.8
+
+  technical_news_filter:
+    enabled: true
+    base_strategy: moving_average_stoch_rsi
+    news_pressure_threshold: 0
+    novelty_threshold: 0.35
+    relevance_threshold: 0.35

@@ -1,0 +1,46 @@
+project:
+  name: ELT Commodities & Backtesting
+  environment: dev
+
+pipeline:
+  start_date: "2020-01-01"
+  timezone: Europe/Paris
+  daily_schedule_time: "20:00"
+  max_retries: 3
+  retry_backoff_seconds: 5
+
+paths:
+  market_data_raw: data/raw/market_data
+  benchmarks_raw: data/raw/benchmarks
+  news_raw: data/raw/news
+  news_embeddings_processed: data/processed/news_embeddings
+  logs: logs
+
+bigquery:
+  location: EU
+  raw_dataset: raw
+  dbt_dataset: dbt_finance
+  mart_dataset: mart
+  tables:
+    market_data_raw: market_data_raw
+    benchmarks_raw: benchmarks_raw
+    news_raw: news_raw
+    news_embeddings_raw: news_embeddings_raw
+    news_sentiment_raw: news_sentiment_raw
+    article_commodity_relevance_raw: article_commodity_relevance_raw
+    news_features_raw: news_features_raw
+    pipeline_logs_raw: pipeline_logs_raw
+
+nlp:
+  embedding_model: sentence-transformers/all-MiniLM-L6-v2
+  sentiment_model: ProsusAI/finbert
+  relevance_threshold: 0.35
+  novelty_window_days: 20
+
+data_quality:
+  allow_future_dates: false
+  market_unique_key:
+    - symbol
+    - date
+  news_unique_key:
+    - article_id

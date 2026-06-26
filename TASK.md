@@ -63,31 +63,31 @@ requirements/
 
 ## 2. Configuration projet
 
-- [ ] `P0` Créer `config/commodities.yml`.
-- [ ] `P0` Créer `config/benchmarks.yml`.
-- [ ] `P0` Créer `config/rss_sources.yml`.
-- [ ] `P0` Créer `config/strategies.yml`.
-- [ ] `P0` Créer `config/settings.yml`.
-- [ ] `P0` Centraliser la lecture de configuration dans `scripts/extract_load/config.py`.
-- [ ] `P0` Gérer les variables d’environnement et les chemins de credentials Google Cloud.
-- [ ] `P0` Vérifier qu’aucun secret n’est versionné.
+- [x] `P0` Créer `config/commodities.yml`.
+- [x] `P0` Créer `config/benchmarks.yml`.
+- [x] `P0` Créer `config/rss_sources.yml`.
+- [x] `P0` Créer `config/strategies.yml`.
+- [x] `P0` Créer `config/settings.yml`.
+- [x] `P0` Centraliser la lecture de configuration dans `scripts/extract_load/config.py`.
+- [x] `P0` Gérer les variables d’environnement et les chemins de credentials Google Cloud.
+- [x] `P0` Vérifier qu’aucun secret n’est versionné.
 
 ---
 
 ## 3. Infrastructure Terraform et Google Cloud
 
-- [ ] `P0` Configurer le provider Google Cloud.
-- [ ] `P0` Activer les API Google Cloud nécessaires.
-- [ ] `P0` Créer les datasets BigQuery `raw`, `dbt_finance` et `mart`.
-- [ ] `P0` Créer le service account du pipeline.
-- [ ] `P0` Configurer les rôles IAM selon le principe du moindre privilège.
-- [ ] `P0` Définir la localisation unique des datasets.
-- [ ] `P0` Ajouter les outputs utiles au déploiement.
-- [ ] `P0` Tester `terraform validate`.
+- [x] `P0` Configurer le provider Google Cloud.
+- [x] `P0` Activer les API Google Cloud nécessaires.
+- [x] `P0` Créer les datasets BigQuery `raw`, `dbt_finance` et `mart`.
+- [x] `P0` Créer le service account du pipeline.
+- [x] `P0` Configurer les rôles IAM selon le principe du moindre privilège.
+- [x] `P0` Définir la localisation unique des datasets.
+- [x] `P0` Ajouter les outputs utiles au déploiement.
+- [x] `P0` Tester `terraform validate`.
 - [ ] `P0` Tester `terraform plan`.
 - [ ] `P0` Tester `terraform apply`.
-- [ ] `P1` Ajouter un bucket Cloud Storage si nécessaire.
-- [ ] `P1` Documenter `terraform destroy` et les précautions associées.
+- [x] `P1` Ajouter un bucket Cloud Storage si nécessaire.
+- [x] `P1` Documenter `terraform destroy` et les précautions associées.
 
 Fichiers attendus :
 
@@ -186,6 +186,7 @@ ingested_at
 - [ ] `P0` Calculer la similarité cosinus article–matière première.
 - [ ] `P0` Appliquer un seuil configurable de pertinence.
 - [ ] `P0` Autoriser plusieurs associations par article.
+- [ ] `P0` Développer `scripts/nlp/compute_sentiment.py`.
 - [ ] `P0` Calculer `positive_probability`, `negative_probability`, `neutral_probability` et `sentiment_score`.
 - [ ] `P0` Calculer `novelty_score`.
 - [ ] `P1` Détecter les doublons sémantiques sur fenêtre récente.

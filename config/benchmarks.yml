@@ -1,0 +1,15 @@
+# Benchmarks provisoires.
+# À confirmer pendant l'étape 0 de cadrage.
+benchmarks:
+  global:
+    benchmark_id: global_dbc
+    symbol: DBC
+    name: Invesco DB Commodity Index Tracking Fund
+    category: diversified_commodities
+    source: yahoo_finance
+    enabled: true
+
+  buy_and_hold:
+    enabled: true
+    benchmark_id_prefix: buy_hold
+    description: "Baseline passive calculée pour chaque matière première activée."
