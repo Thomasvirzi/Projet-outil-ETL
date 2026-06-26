@@ -110,6 +110,41 @@ COMMODITIES = {
         "category": "Agriculture",
         "priority": "C",
         "rss_query": '"cotton prices" OR "cotton crop" OR "cotton harvest" OR "China cotton"'
+    },
+    "ORANGE_JUICE": {
+        "name": "Jus d'orange concentré",
+        "ticker": "OJ=F",
+        "category": "Soft commodities",
+        "priority": "C",
+        "rss_query": '"orange juice" OR "citrus crop" OR "Florida citrus" OR "Brazil orange" OR "citrus greening"'
+    },
+    "ROUGH_RICE": {
+        "name": "Riz brut",
+        "ticker": "ZR=F",
+        "category": "Agriculture",
+        "priority": "C",
+        "rss_query": '"rice prices" OR "rice exports" OR "rice harvest" OR "rice reserves" OR "India rice ban"'
+    },
+    "LUMBER": {
+        "name": "Bois d'œuvre",
+        "ticker": "LBR=F",
+        "category": "Matériaux",
+        "priority": "C",
+        "rss_query": '"lumber prices" OR "lumber futures" OR "housing starts" OR "softwood lumber" OR "Canada lumber"'
+    },
+    "OLIVE_OIL_PROXY": {
+        "name": "Huile d'olive (proxy ETF ASX)",
+        "ticker": "CBO.AX",
+        "category": "Agriculture",
+        "priority": "C",
+        "rss_query": '"olive oil prices" OR "olive harvest" OR "olive crop" OR "Spain olive" OR "drought olive"'
+    },
+    "LITHIUM_HYDROXIDE": {
+        "name": "Lithium hydroxyde (futures)",
+        "ticker": "LTH=F",
+        "category": "Métaux industriels",
+        "priority": "C",
+        "rss_query": '"lithium hydroxide" OR "lithium price" OR "battery metals" OR "EV lithium demand" OR "lithium supply"'
     }
 }
 
