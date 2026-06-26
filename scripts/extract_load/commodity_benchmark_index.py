@@ -37,6 +37,7 @@ import json
 import logging
 import math
 import sys
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -392,9 +393,59 @@ def _download_single_ticker(
         raise ValueError("Aucune donnée retournée par yfinance")
 
     if isinstance(data.columns, pd.MultiIndex):
-        data.columns = data.columns.get_level_values(0)
+        # Level 0 = price field (Open, Close, …), level 1 = ticker symbol
+        # If level 0 only contains ticker names, price fields are at level 1
+        price_fields = {"Open", "High", "Low", "Close", "Adj Close", "Volume"}
+        if not (price_fields & set(data.columns.get_level_values(0))):
+            data.columns = data.columns.get_level_values(1)
+        else:
+            data.columns = data.columns.get_level_values(0)
+
+    # Drop duplicate columns that can appear with certain yfinance versions
+    if data.columns.duplicated().any():
+        data = data.loc[:, ~data.columns.duplicated()]
 
     return data
+
+
+def _fetch_asset_series(
+    asset_id: str,
+    config: dict[str, str],
+    start_date: str,
+    end_date: str | None,
+    yahoo_column: str,
+    price_field: str,
+) -> tuple[str, pd.Series | None, dict[str, str] | None]:
+    ticker = config["ticker"]
+    try:
+        data = _download_single_ticker(ticker, start_date, end_date)
+
+        chosen_column = yahoo_column
+        if chosen_column not in data.columns:
+            if price_field == "adj_close" and "Close" in data.columns:
+                logging.warning(
+                    "%s ne fournit pas Adj Close ; utilisation de Close.", ticker
+                )
+                chosen_column = "Close"
+            else:
+                raise ValueError(
+                    f"Colonne {yahoo_column!r} absente. Colonnes : {list(data.columns)}"
+                )
+
+        col_data = data[chosen_column]
+        if isinstance(col_data, pd.DataFrame):
+            col_data = col_data.iloc[:, 0]
+        series = pd.to_numeric(col_data, errors="coerce")
+        series.index = pd.to_datetime(series.index, utc=True, errors="coerce")
+        series = series[~series.index.isna()]
+        series.name = asset_id
+
+        logging.info("%s : %s observations", asset_id, f"{series.notna().sum():,}")
+        return asset_id, series, None
+
+    except Exception as exc:
+        logging.exception("Échec du téléchargement de %s", ticker)
+        return asset_id, None, {"asset_id": asset_id, "ticker": ticker, "error": str(exc)}
 
 
 def download_price_panel(
@@ -404,46 +455,27 @@ def download_price_panel(
     price_field: str,
 ) -> tuple[pd.DataFrame, list[dict[str, str]]]:
     yahoo_column = PRICE_FIELD_MAP[price_field]
-    series_list: list[pd.Series] = []
+    results: dict[str, pd.Series] = {}
     errors: list[dict[str, str]] = []
 
-    for asset_id, config in selected_assets.items():
-        ticker = config["ticker"]
-        logging.info("Téléchargement %s (%s)", asset_id, ticker)
+    max_workers = min(8, len(selected_assets))
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(
+                _fetch_asset_series,
+                asset_id, config, start_date, end_date, yahoo_column, price_field,
+            ): asset_id
+            for asset_id, config in selected_assets.items()
+        }
+        for future in as_completed(futures):
+            asset_id, series, error = future.result()
+            if series is not None:
+                results[asset_id] = series
+            else:
+                errors.append(error)
 
-        try:
-            data = _download_single_ticker(ticker, start_date, end_date)
-
-            chosen_column = yahoo_column
-            if chosen_column not in data.columns:
-                if price_field == "adj_close" and "Close" in data.columns:
-                    logging.warning(
-                        "%s ne fournit pas Adj Close ; utilisation de Close.", ticker
-                    )
-                    chosen_column = "Close"
-                else:
-                    raise ValueError(
-                        f"Colonne {yahoo_column!r} absente. Colonnes : "
-                        f"{list(data.columns)}"
-                    )
-
-            series = pd.to_numeric(data[chosen_column], errors="coerce")
-            series.index = pd.to_datetime(series.index, utc=True, errors="coerce")
-            series = series[~series.index.isna()]
-            series.name = asset_id
-            series_list.append(series)
-
-            logging.info("%s : %s observations", asset_id, f"{series.notna().sum():,}")
-
-        except Exception as exc:
-            logging.exception("Échec du téléchargement de %s", ticker)
-            errors.append(
-                {
-                    "asset_id": asset_id,
-                    "ticker": ticker,
-                    "error": str(exc),
-                }
-            )
+    # Preserve selection order
+    series_list = [results[aid] for aid in selected_assets if aid in results]
 
     if len(series_list) < 2:
         raise RuntimeError(
@@ -451,6 +483,8 @@ def download_price_panel(
         )
 
     prices = pd.concat(series_list, axis=1).sort_index()
+    # Normalise le nom de l'index (yfinance retourne "Date" avec majuscule)
+    prices.index.name = "date"
     return prices, errors
 
 
@@ -576,7 +610,8 @@ def get_rebalance_flags(
         return flags
 
     period_frequency = REBALANCE_PERIOD_MAP[rebalance]
-    periods = dates.tz_localize(None).to_period(period_frequency)
+    naive_dates = dates.tz_convert(None) if dates.tz is not None else dates
+    periods = naive_dates.to_period(period_frequency)
     flags.iloc[1:] = np.asarray(periods[1:] != periods[:-1])
 
     return flags
@@ -587,59 +622,78 @@ def build_synthetic_index(
     config: IndexConfig,
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     asset_ids = list(prices.columns)
+    n_assets = len(asset_ids)
     returns = prices.pct_change(fill_method=None)
 
+    # Pré-calcul vectorisé de la volatilité rolling (évite le recalcul à chaque rebalancement)
+    rolling_vol: pd.DataFrame | None = None
     if config.weighting == "inverse_vol":
         start_position = max(config.vol_lookback, config.min_vol_observations)
         if len(prices) <= start_position:
-            raise ValueError(
-                "Historique insuffisant pour la pondération inverse_vol."
-            )
+            raise ValueError("Historique insuffisant pour la pondération inverse_vol.")
+        rolling_vol = returns.rolling(
+            config.vol_lookback, min_periods=config.min_vol_observations
+        ).std(ddof=1)
     else:
         start_position = 0
+
+    # Poids égaux pré-calculés une seule fois
+    equal_weights = np.full(n_assets, 1.0 / n_assets)
 
     index_dates = prices.index[start_position:]
     rebalance_flags = get_rebalance_flags(index_dates, config.rebalance)
 
-    units: pd.Series | None = None
+    # Tableaux numpy pour accès rapide dans la boucle
+    prices_arr = prices.values  # shape (T, N)
+    prices_index = prices.index
+
+    units_arr: np.ndarray | None = None
     previous_level: float | None = None
     index_records: list[dict[str, Any]] = []
-    weight_records: list[dict[str, Any]] = []
+
+    # Accumulation des poids sous forme de tableaux pour construction finale en une passe
+    weight_dates: list = []
+    actual_weights_list: list[np.ndarray] = []
+    target_weights_list: list[np.ndarray | None] = []
+    rebalance_executed_list: list[bool] = []
 
     for date_position, date in enumerate(index_dates):
-        current_prices = prices.loc[date, asset_ids]
-        rebalance_requested = bool(rebalance_flags.loc[date])
+        full_position = prices_index.get_loc(date)
+        cur_prices = prices_arr[full_position]  # numpy array, pas de Series
+
+        rebalance_requested = bool(rebalance_flags.iloc[date_position])
         rebalance_executed = False
         rebalance_skipped = False
         turnover = 0.0
         transaction_cost = 0.0
-        target_weights: pd.Series | None = None
+        target_w: np.ndarray | None = None
 
-        # Les poids sont toujours calculés avec des rendements connus avant la date.
-        full_position = prices.index.get_loc(date)
-        historical_returns = returns.iloc[:full_position]
+        if units_arr is None:
+            if (cur_prices <= 0).any():
+                invalid = [asset_ids[i] for i, v in enumerate(cur_prices) if v <= 0]
+                raise ValueError("Prix initial non positif pour : " + ", ".join(invalid))
 
-        if units is None:
-            if (current_prices <= 0).any():
-                invalid = list(current_prices.index[current_prices <= 0])
-                raise ValueError(
-                    "Prix initial non positif pour : " + ", ".join(invalid)
-                )
+            if config.weighting == "equal":
+                target_w = equal_weights.copy()
+            else:
+                vol = rolling_vol.iloc[full_position - 1].values if full_position > 0 else rolling_vol.iloc[0].values  # type: ignore[union-attr]
+                if not (np.isfinite(vol).all() and (vol > 0).all()):
+                    excluded = [asset_ids[i] for i, ok in enumerate(np.isfinite(vol) & (vol > 0)) if not ok]
+                    raise ValueError(
+                        "Volatilité impossible à estimer pour : "
+                        + ", ".join(excluded)
+                        + ". Augmenter l'historique ou réduire --min-vol-observations."
+                    )
+                inv_vol = 1.0 / vol
+                target_w = inv_vol / inv_vol.sum()
 
-            target_weights = calculate_target_weights(
-                asset_ids=asset_ids,
-                historical_returns=historical_returns,
-                weighting=config.weighting,
-                vol_lookback=config.vol_lookback,
-                min_vol_observations=config.min_vol_observations,
-            )
-            units = config.base_value * target_weights / current_prices
+            units_arr = config.base_value * target_w / cur_prices
             index_level = config.base_value
             gross_index_level = config.base_value
             rebalance_executed = True
 
         else:
-            position_values_before = units * current_prices
+            position_values_before = units_arr * cur_prices
             gross_index_level = float(position_values_before.sum())
 
             if not math.isfinite(gross_index_level):
@@ -648,92 +702,88 @@ def build_synthetic_index(
             index_level = gross_index_level
 
             if rebalance_requested:
-                if gross_index_level <= 0 or (current_prices <= 0).any():
-                    # Une allocation en poids positifs n'est pas définie proprement
-                    # lorsque le niveau total ou un prix de rebalancement est négatif.
+                if gross_index_level <= 0 or (cur_prices <= 0).any():
                     rebalance_skipped = True
                     logging.warning(
                         "Rebalancement ignoré le %s en raison d'un prix ou niveau non positif.",
                         date.date(),
                     )
                 else:
-                    target_weights = calculate_target_weights(
-                        asset_ids=asset_ids,
-                        historical_returns=historical_returns,
-                        weighting=config.weighting,
-                        vol_lookback=config.vol_lookback,
-                        min_vol_observations=config.min_vol_observations,
-                    )
+                    if config.weighting == "equal":
+                        target_w = equal_weights.copy()
+                    else:
+                        prev_pos = full_position - 1
+                        vol = rolling_vol.iloc[prev_pos].values  # type: ignore[union-attr]
+                        if not (np.isfinite(vol).all() and (vol > 0).all()):
+                            excluded = [asset_ids[i] for i, ok in enumerate(np.isfinite(vol) & (vol > 0)) if not ok]
+                            raise ValueError(
+                                "Volatilité impossible à estimer pour : "
+                                + ", ".join(excluded)
+                                + ". Augmenter l'historique ou réduire --min-vol-observations."
+                            )
+                        inv_vol = 1.0 / vol
+                        target_w = inv_vol / inv_vol.sum()
 
                     current_weights = position_values_before / gross_index_level
-                    turnover = float(
-                        0.5 * (target_weights - current_weights).abs().sum()
-                    )
+                    turnover = float(0.5 * np.abs(target_w - current_weights).sum())
                     transaction_cost = float(
-                        gross_index_level
-                        * turnover
-                        * config.transaction_cost_bps
-                        / 10_000.0
+                        gross_index_level * turnover * config.transaction_cost_bps / 10_000.0
                     )
                     index_level = gross_index_level - transaction_cost
 
                     if index_level <= 0:
-                        raise ValueError(
-                            f"Les coûts rendent l'indice non positif le {date}."
-                        )
+                        raise ValueError(f"Les coûts rendent l'indice non positif le {date}.")
 
-                    units = index_level * target_weights / current_prices
+                    units_arr = index_level * target_w / cur_prices
                     rebalance_executed = True
 
-        assert units is not None
+        assert units_arr is not None
 
-        position_values_after = units * current_prices
-        actual_weights = position_values_after / float(position_values_after.sum())
+        position_values_after = units_arr * cur_prices
+        total_after = position_values_after.sum()
+        actual_w = position_values_after / total_after
 
-        daily_return = (
-            np.nan
-            if previous_level is None
-            else index_level / previous_level - 1.0
-        )
+        daily_return = np.nan if previous_level is None else index_level / previous_level - 1.0
 
-        index_records.append(
-            {
-                "date": date,
-                "index_level": index_level,
-                "gross_index_level": gross_index_level,
-                "daily_return": daily_return,
-                "rebalance_requested": rebalance_requested,
-                "rebalance_executed": rebalance_executed,
-                "rebalance_skipped": rebalance_skipped,
-                "turnover": turnover,
-                "transaction_cost": transaction_cost,
-            }
-        )
+        index_records.append({
+            "date": date,
+            "index_level": index_level,
+            "gross_index_level": gross_index_level,
+            "daily_return": daily_return,
+            "rebalance_requested": rebalance_requested,
+            "rebalance_executed": rebalance_executed,
+            "rebalance_skipped": rebalance_skipped,
+            "turnover": turnover,
+            "transaction_cost": transaction_cost,
+        })
 
-        for asset_id in asset_ids:
-            weight_records.append(
-                {
-                    "date": date,
-                    "asset_id": asset_id,
-                    "actual_weight": float(actual_weights[asset_id]),
-                    "target_weight": (
-                        float(target_weights[asset_id])
-                        if target_weights is not None
-                        else np.nan
-                    ),
-                    "rebalance_executed": rebalance_executed,
-                }
-            )
+        weight_dates.append(date)
+        actual_weights_list.append(actual_w)
+        target_weights_list.append(target_w)
+        rebalance_executed_list.append(rebalance_executed)
 
         previous_level = index_level
 
     index_df = pd.DataFrame(index_records).set_index("date")
     index_df["running_peak"] = index_df["index_level"].cummax()
-    index_df["drawdown"] = (
-        index_df["index_level"] / index_df["running_peak"] - 1.0
-    )
+    index_df["drawdown"] = index_df["index_level"] / index_df["running_peak"] - 1.0
 
-    weights_df = pd.DataFrame(weight_records)
+    # Construction du DataFrame des poids en une seule passe (évite la boucle interne)
+    n_dates = len(weight_dates)
+    actual_arr = np.stack(actual_weights_list)   # (T, N)
+    target_arr = np.full((n_dates, n_assets), np.nan)
+    for i, tw in enumerate(target_weights_list):
+        if tw is not None:
+            target_arr[i] = tw
+
+    weights_df = pd.DataFrame({
+        "date": np.repeat(weight_dates, n_assets),
+        "asset_id": np.tile(asset_ids, n_dates),
+        "actual_weight": actual_arr.ravel(),
+        "target_weight": target_arr.ravel(),
+        "rebalance_executed": np.repeat(rebalance_executed_list, n_assets),
+    })
+
     return index_df, weights_df
 
 
