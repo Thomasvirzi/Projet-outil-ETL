@@ -1,0 +1,408 @@
+import pandas as pd
+from urllib.parse import quote_plus
+from pathlib import Path
+import yfinance as yf
+
+# 1. Configuration de l'univers des matières premières
+
+COMMODITIES = {
+    "WTI": {
+        "name": "Pétrole WTI",
+        "ticker": "CL=F",
+        "category": "Énergie",
+        "priority": "A",
+        "rss_query": '"WTI crude oil" OR "US crude oil" OR OPEC OR "oil inventories"'
+    },
+    "GOLD": {
+        "name": "Or",
+        "ticker": "GC=F",
+        "category": "Métaux précieux",
+        "priority": "A",
+        "rss_query": '"gold price" OR bullion OR "central bank gold" OR "real yields"'
+    },
+    "NATURAL_GAS": {
+        "name": "Gaz naturel Henry Hub",
+        "ticker": "NG=F",
+        "category": "Énergie",
+        "priority": "A",
+        "rss_query": '"Henry Hub" OR "natural gas storage" OR LNG OR "gas inventories"'
+    },
+    "COPPER": {
+        "name": "Cuivre",
+        "ticker": "HG=F",
+        "category": "Métaux industriels",
+        "priority": "A",
+        "rss_query": '"copper price" OR "copper inventories" OR "copper mine" OR "China copper"'
+    },
+    "WHEAT": {
+        "name": "Blé Chicago SRW",
+        "ticker": "ZW=F",
+        "category": "Agriculture",
+        "priority": "A",
+        "rss_query": '"wheat prices" OR "wheat harvest" OR "Black Sea wheat" OR "wheat exports"'
+    },
+    "CORN": {
+        "name": "Maïs",
+        "ticker": "ZC=F",
+        "category": "Agriculture",
+        "priority": "A",
+        "rss_query": '"corn prices" OR "corn harvest" OR "corn crop" OR ethanol USDA'
+    },
+    "COCOA": {
+        "name": "Cacao",
+        "ticker": "CC=F",
+        "category": "Soft commodities",
+        "priority": "A",
+        "rss_query": '"cocoa prices" OR "cocoa crop" OR "Ivory Coast cocoa" OR "Ghana cocoa"'
+    },
+    "COFFEE": {
+        "name": "Café Arabica",
+        "ticker": "KC=F",
+        "category": "Soft commodities",
+        "priority": "A",
+        "rss_query": '"arabica coffee" OR "coffee prices" OR "Brazil coffee crop" OR "coffee frost"'
+    },
+    "BRENT": {
+        "name": "Pétrole Brent",
+        "ticker": "BZ=F",
+        "category": "Énergie",
+        "priority": "B",
+        "rss_query": '"Brent crude" OR "Brent oil" OR OPEC OR "global oil supply"'
+    },
+    "SILVER": {
+        "name": "Argent",
+        "ticker": "SI=F",
+        "category": "Métaux précieux",
+        "priority": "B",
+        "rss_query": '"silver price" OR "silver demand" OR "silver market" OR "solar silver"'
+    },
+    "SOYBEAN": {
+        "name": "Soja",
+        "ticker": "ZS=F",
+        "category": "Agriculture",
+        "priority": "B",
+        "rss_query": '"soybean prices" OR "soybean crop" OR "Brazil soybeans" OR "China soybean imports"'
+    },
+    "SUGAR": {
+        "name": "Sucre No. 11",
+        "ticker": "SB=F",
+        "category": "Soft commodities",
+        "priority": "B",
+        "rss_query": '"sugar prices" OR "Brazil sugar" OR "India sugar exports" OR "sugar crop"'
+    },
+    "PLATINUM": {
+        "name": "Platine",
+        "ticker": "PL=F",
+        "category": "Métaux précieux",
+        "priority": "C",
+        "rss_query": '"platinum price" OR "platinum supply" OR "South Africa platinum" OR hydrogen'
+    },
+    "PALLADIUM": {
+        "name": "Palladium",
+        "ticker": "PA=F",
+        "category": "Métaux précieux",
+        "priority": "C",
+        "rss_query": '"palladium price" OR "palladium supply" OR "Russia palladium" OR autocatalyst'
+    },
+    "COTTON": {
+        "name": "Coton",
+        "ticker": "CT=F",
+        "category": "Agriculture",
+        "priority": "C",
+        "rss_query": '"cotton prices" OR "cotton crop" OR "cotton harvest" OR "China cotton"'
+    }
+}
+
+# 2. Paramètres de téléchargement
+
+START_DATE = "2015-01-01"
+END_DATE = None
+INTERVAL = "1d"
+
+# Pour ne récupérer que les marchés prioritaires :
+# Pour récupérer les 15 marchés :
+SELECTED_PRIORITIES = {"A", "B", "C"}
+
+selected_commodities = {
+    key: value
+    for key, value in COMMODITIES.items()
+    if value["priority"] in SELECTED_PRIORITIES
+}
+
+# 3. Téléchargement groupé des prix (1 appel API pour tous les tickers)
+
+ticker_to_id = {v["ticker"]: k for k, v in selected_commodities.items()}
+tickers = list(ticker_to_id.keys())
+
+download_errors = []
+price_frames = []
+
+try:
+    raw = yf.download(
+        tickers,
+        start=START_DATE,
+        end=END_DATE,
+        interval=INTERVAL,
+        auto_adjust=False,
+        progress=False,
+        threads=True,
+    )
+
+    if not raw.empty:
+        # Reshape : colonnes MultiIndex (champ × ticker) → format long
+        if isinstance(raw.columns, pd.MultiIndex):
+            raw = raw.stack(level=1).reset_index()
+            date_col = "Datetime" if "Datetime" in raw.columns else "Date"
+            raw = raw.rename(columns={date_col: "date", "Ticker": "ticker"})
+        else:
+            raw = raw.reset_index()
+            date_col = "Datetime" if "Datetime" in raw.columns else "Date"
+            raw = raw.rename(columns={date_col: "date"})
+            raw["ticker"] = tickers[0]
+
+        raw.columns = [c.lower().replace(" ", "_") for c in raw.columns]
+        raw["commodity_id"] = raw["ticker"].map(ticker_to_id)
+
+        # Jointure vectorisée des métadonnées
+        meta_df = pd.DataFrame([
+            {
+                "commodity_id": cid,
+                "commodity_name": cfg["name"],
+                "category": cfg["category"],
+                "priority": cfg["priority"],
+            }
+            for cid, cfg in selected_commodities.items()
+        ])
+        raw = raw.merge(meta_df, on="commodity_id", how="left")
+
+        # Détection des tickers sans données
+        for ticker, commodity_id in ticker_to_id.items():
+            ticker_rows = raw[raw["ticker"] == ticker]
+            if ticker_rows.empty or ticker_rows["close"].isna().all():
+                download_errors.append({
+                    "commodity_id": commodity_id,
+                    "ticker": ticker,
+                    "error": "Aucune donnée retournée",
+                })
+
+        expected_columns = [
+            "date", "commodity_id", "commodity_name", "ticker",
+            "category", "priority", "open", "high", "low", "close", "adj_close", "volume",
+        ]
+        available_columns = [c for c in expected_columns if c in raw.columns]
+        price_frames.append(raw[available_columns])
+
+except Exception as error:
+    for ticker, commodity_id in ticker_to_id.items():
+        download_errors.append({
+            "commodity_id": commodity_id,
+            "ticker": ticker,
+            "error": str(error),
+        })
+
+prices_df = (
+    pd.concat(price_frames, ignore_index=True)
+    if price_frames
+    else pd.DataFrame()
+)
+
+if not prices_df.empty:
+    prices_df["date"] = pd.to_datetime(prices_df["date"], utc=True, errors="coerce")
+    prices_df = (
+        prices_df
+        .drop_duplicates(subset=["date", "commodity_id"])
+        .sort_values(["commodity_id", "date"])
+        .reset_index(drop=True)
+    )
+
+# 4. Table de référence des matières premières
+
+commodities_df = pd.DataFrame([
+    {
+        "commodity_id": commodity_id,
+        "commodity_name": config["name"],
+        "ticker": config["ticker"],
+        "category": config["category"],
+        "priority": config["priority"],
+        "rss_query": config["rss_query"],
+        "rss_url": (
+            "https://news.google.com/rss/search?"
+            f"q={quote_plus(config['rss_query'])}"
+            "&hl=en-US&gl=US&ceid=US:en"
+        )
+    }
+    for commodity_id, config in selected_commodities.items()
+])
+
+# 5. Contrôles
+
+print(f"Nombre de matières premières : {len(commodities_df)}")
+print(f"Nombre de lignes de prix : {len(prices_df):,}")
+print(f"Période : {prices_df['date'].min()} → {prices_df['date'].max()}")
+
+if download_errors:
+    print("\nErreurs rencontrées :")
+
+# NETTOYAGE : DOUBLONS ET VALEURS MANQUANTES
+# Nombre maximal de lignes consécutives à interpoler
+# Une limite faible évite de fabriquer artificiellement de longues périodes.
+MAX_INTERPOLATION_GAP = 2
+
+prices_clean_df = prices_df.copy()
+
+# 1. Uniformisation des types (la date est déjà en datetime UTC depuis l'étape 3)
+
+numeric_columns = [
+    col for col in ["open", "high", "low", "close", "adj_close", "volume"]
+    if col in prices_clean_df.columns
+]
+
+prices_clean_df[numeric_columns] = prices_clean_df[numeric_columns].apply(
+    pd.to_numeric, errors="coerce"
+)
+
+# Remplacement des valeurs infinies par NaN
+prices_clean_df[numeric_columns] = prices_clean_df[numeric_columns].replace(
+    [float("inf"), float("-inf")], pd.NA
+)
+
+# Suppression des lignes sans date ou sans identifiant
+prices_clean_df = prices_clean_df.dropna(subset=["date", "commodity_id"])
+
+# 2. Suppression des doublons
+
+rows_before = len(prices_clean_df)
+
+# Suppression des doublons parfaitement identiques
+prices_clean_df = prices_clean_df.drop_duplicates()
+
+# Pour plusieurs lignes ayant la même matière et la même date,
+# on conserve celle contenant le plus de valeurs renseignées.
+prices_clean_df["_completeness"] = prices_clean_df[numeric_columns].notna().sum(axis=1)
+
+prices_clean_df = (
+    prices_clean_df
+    .sort_values(
+        ["commodity_id", "date", "_completeness"],
+        ascending=[True, True, False]
+    )
+    .drop_duplicates(subset=["commodity_id", "date"], keep="first")
+    .drop(columns="_completeness")
+)
+
+duplicates_removed = rows_before - len(prices_clean_df)
+
+# 3. Rapport des valeurs manquantes avant traitement
+
+missing_before = prices_clean_df[numeric_columns].isna().sum()
+
+# Création d'indicateurs pour conserver la traçabilité
+for col in numeric_columns:
+    prices_clean_df[f"{col}_was_missing"] = prices_clean_df[col].isna().astype("int8")
+
+# 4. Traitement des valeurs manquantes
+
+prices_clean_df = prices_clean_df.sort_values(["commodity_id", "date"]).reset_index(drop=True)
+
+price_columns = [col for col in ["open", "high", "low", "close"] if col in prices_clean_df.columns]
+
+# Interpolation limitée à l'intérieur des séries.
+# Les valeurs au début et à la fin ne sont pas extrapolées.
+for col in price_columns:
+    prices_clean_df[col] = (
+        prices_clean_df
+        .groupby("commodity_id")[col]
+        .transform(
+            lambda series: series.interpolate(
+                method="linear",
+                limit=MAX_INTERPOLATION_GAP,
+                limit_area="inside"
+            )
+        )
+    )
+
+# Si la clôture existe, elle peut servir à compléter un OHLC manquant
+if "close" in prices_clean_df.columns:
+    for col in ["open", "high", "low"]:
+        if col in prices_clean_df.columns:
+            prices_clean_df[col] = prices_clean_df[col].fillna(prices_clean_df["close"])
+
+# Yahoo Finance fournit parfois Adj Close vide pour certains futures
+if {"adj_close", "close"}.issubset(prices_clean_df.columns):
+    prices_clean_df["adj_close"] = prices_clean_df["adj_close"].fillna(prices_clean_df["close"])
+
+# Le volume n'est pas interpolé, car cela créerait un faux volume.
+# On conserve NaN et on ajoute une version exploitable par les modèles.
+if "volume" in prices_clean_df.columns:
+    prices_clean_df["volume_filled"] = prices_clean_df["volume"].fillna(0)
+
+# 5. Suppression des lignes inutilisables
+
+rows_before_close_filter = len(prices_clean_df)
+
+# Une ligne sans clôture ne permet pas de calculer les rendements
+prices_clean_df = prices_clean_df.dropna(subset=["close"])
+
+rows_without_close_removed = rows_before_close_filter - len(prices_clean_df)
+
+# 6. Contrôle de cohérence OHLC
+
+required_ohlc = {"open", "high", "low", "close"}
+
+if required_ohlc.issubset(prices_clean_df.columns):
+    ohlc_cols = ["open", "high", "low", "close"]
+    prices_clean_df["high"] = prices_clean_df[ohlc_cols].max(axis=1)
+    prices_clean_df["low"] = prices_clean_df[ohlc_cols].min(axis=1)
+
+# Les prix négatifs ou nuls sont considérés comme invalides.
+# Attention : le pétrole WTI a historiquement connu des prix négatifs.
+# On ne filtre donc pas automatiquement CL=F.
+price_check_columns = [col for col in ["open", "high", "low", "close"] if col in prices_clean_df.columns]
+
+invalid_price_mask = (
+    prices_clean_df[price_check_columns].le(0).any(axis=1)
+    & prices_clean_df["ticker"].ne("CL=F")
+)
+
+invalid_prices_removed = int(invalid_price_mask.sum())
+prices_clean_df = prices_clean_df.loc[~invalid_price_mask].copy()
+
+# 7. Rapport final
+
+missing_after = prices_clean_df[numeric_columns].isna().sum()
+
+missing_report = pd.DataFrame({
+    "missing_before": missing_before,
+    "missing_after": missing_after,
+})
+missing_report["values_treated"] = missing_report["missing_before"] - missing_report["missing_after"]
+missing_report["missing_rate_after_pct"] = (
+    missing_report["missing_after"] / len(prices_clean_df) * 100
+).round(2)
+
+prices_clean_df = (
+    prices_clean_df
+    .sort_values(["commodity_id", "date"])
+    .reset_index(drop=True)
+)
+
+print("Nettoyage terminé ✅")
+print(f"Doublons supprimés : {duplicates_removed:,}")
+print(f"Lignes supprimées car Close manquant : {rows_without_close_removed:,}")
+print(f"Lignes supprimées pour prix invalides : {invalid_prices_removed:,}")
+print(f"Lignes finales : {len(prices_clean_df):,}")
+
+# Sauvegarde du dataset nettoyé
+
+OUTPUT_FOLDER = Path("data/raw/market_data")
+OUTPUT_FOLDER.mkdir(parents=True, exist_ok=True)
+OUTPUT_PATH = OUTPUT_FOLDER / "data_raw_clean.csv"
+
+prices_clean_df.to_csv(
+    OUTPUT_PATH,
+    index=False,
+    encoding="utf-8",
+    date_format="%Y-%m-%d"
+)
+
+print(f"Dataset sauvegardé dans : {OUTPUT_PATH.resolve()} ✅")
