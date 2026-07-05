@@ -51,127 +51,33 @@ import yfinance as yf
 # UNIVERS D'ACTIFS
 # ============================================================
 
+# (asset_id, nom, ticker Yahoo Finance, catégorie, priorité)
+_COMMODITIES_TABLE: list[tuple[str, str, str, str, str]] = [
+    ("WTI", "Pétrole WTI", "CL=F", "Énergie", "A"),
+    ("GOLD", "Or", "GC=F", "Métaux précieux", "A"),
+    ("NATURAL_GAS", "Gaz naturel Henry Hub", "NG=F", "Énergie", "A"),
+    ("COPPER", "Cuivre", "HG=F", "Métaux industriels", "A"),
+    ("WHEAT", "Blé Chicago SRW", "ZW=F", "Agriculture", "A"),
+    ("CORN", "Maïs", "ZC=F", "Agriculture", "A"),
+    ("COCOA", "Cacao", "CC=F", "Soft commodities", "A"),
+    ("COFFEE", "Café Arabica", "KC=F", "Soft commodities", "A"),
+    ("BRENT", "Pétrole Brent", "BZ=F", "Énergie", "B"),
+    ("SILVER", "Argent", "SI=F", "Métaux précieux", "B"),
+    ("SOYBEAN", "Soja", "ZS=F", "Agriculture", "B"),
+    ("SUGAR", "Sucre No. 11", "SB=F", "Soft commodities", "B"),
+    ("PLATINUM", "Platine", "PL=F", "Métaux précieux", "C"),
+    ("PALLADIUM", "Palladium", "PA=F", "Métaux précieux", "C"),
+    ("COTTON", "Coton", "CT=F", "Agriculture", "C"),
+    ("ORANGE_JUICE", "Jus d'orange concentré", "OJ=F", "Soft commodities", "C"),
+    ("ROUGH_RICE", "Riz brut", "ZR=F", "Agriculture", "C"),
+    ("LUMBER", "Bois d'œuvre", "LBR=F", "Matériaux", "C"),
+    ("OLIVE_OIL_PROXY", "Huile d'olive (proxy ETF ASX)", "CBO.AX", "Agriculture", "C"),
+    ("LITHIUM_HYDROXIDE", "Lithium hydroxyde (futures)", "LTH=F", "Métaux industriels", "C"),
+]
+
 COMMODITIES: dict[str, dict[str, str]] = {
-    "WTI": {
-        "name": "Pétrole WTI",
-        "ticker": "CL=F",
-        "category": "Énergie",
-        "priority": "A",
-    },
-    "GOLD": {
-        "name": "Or",
-        "ticker": "GC=F",
-        "category": "Métaux précieux",
-        "priority": "A",
-    },
-    "NATURAL_GAS": {
-        "name": "Gaz naturel Henry Hub",
-        "ticker": "NG=F",
-        "category": "Énergie",
-        "priority": "A",
-    },
-    "COPPER": {
-        "name": "Cuivre",
-        "ticker": "HG=F",
-        "category": "Métaux industriels",
-        "priority": "A",
-    },
-    "WHEAT": {
-        "name": "Blé Chicago SRW",
-        "ticker": "ZW=F",
-        "category": "Agriculture",
-        "priority": "A",
-    },
-    "CORN": {
-        "name": "Maïs",
-        "ticker": "ZC=F",
-        "category": "Agriculture",
-        "priority": "A",
-    },
-    "COCOA": {
-        "name": "Cacao",
-        "ticker": "CC=F",
-        "category": "Soft commodities",
-        "priority": "A",
-    },
-    "COFFEE": {
-        "name": "Café Arabica",
-        "ticker": "KC=F",
-        "category": "Soft commodities",
-        "priority": "A",
-    },
-    "BRENT": {
-        "name": "Pétrole Brent",
-        "ticker": "BZ=F",
-        "category": "Énergie",
-        "priority": "B",
-    },
-    "SILVER": {
-        "name": "Argent",
-        "ticker": "SI=F",
-        "category": "Métaux précieux",
-        "priority": "B",
-    },
-    "SOYBEAN": {
-        "name": "Soja",
-        "ticker": "ZS=F",
-        "category": "Agriculture",
-        "priority": "B",
-    },
-    "SUGAR": {
-        "name": "Sucre No. 11",
-        "ticker": "SB=F",
-        "category": "Soft commodities",
-        "priority": "B",
-    },
-    "PLATINUM": {
-        "name": "Platine",
-        "ticker": "PL=F",
-        "category": "Métaux précieux",
-        "priority": "C",
-    },
-    "PALLADIUM": {
-        "name": "Palladium",
-        "ticker": "PA=F",
-        "category": "Métaux précieux",
-        "priority": "C",
-    },
-    "COTTON": {
-        "name": "Coton",
-        "ticker": "CT=F",
-        "category": "Agriculture",
-        "priority": "C",
-    },
-    "ORANGE_JUICE": {
-        "name": "Jus d'orange concentré",
-        "ticker": "OJ=F",
-        "category": "Soft commodities",
-        "priority": "C",
-    },
-    "ROUGH_RICE": {
-        "name": "Riz brut",
-        "ticker": "ZR=F",
-        "category": "Agriculture",
-        "priority": "C",
-    },
-    "LUMBER": {
-        "name": "Bois d'œuvre",
-        "ticker": "LBR=F",
-        "category": "Matériaux",
-        "priority": "C",
-    },
-    "OLIVE_OIL_PROXY": {
-        "name": "Huile d'olive (proxy ETF ASX)",
-        "ticker": "CBO.AX",
-        "category": "Agriculture",
-        "priority": "C",
-    },
-    "LITHIUM_HYDROXIDE": {
-        "name": "Lithium hydroxyde (futures)",
-        "ticker": "LTH=F",
-        "category": "Métaux industriels",
-        "priority": "C",
-    },
+    asset_id: {"name": name, "ticker": ticker, "category": category, "priority": priority}
+    for asset_id, name, ticker, category, priority in _COMMODITIES_TABLE
 }
 
 PRICE_FIELD_MAP = {
@@ -566,39 +472,6 @@ def align_price_panel(
 # CALCUL DES POIDS ET DE L'INDICE
 # ============================================================
 
-def calculate_target_weights(
-    asset_ids: list[str],
-    historical_returns: pd.DataFrame,
-    weighting: str,
-    vol_lookback: int,
-    min_vol_observations: int,
-) -> pd.Series:
-    if weighting == "equal":
-        return pd.Series(1.0 / len(asset_ids), index=asset_ids, dtype=float)
-
-    trailing = historical_returns[asset_ids].tail(vol_lookback)
-    valid_counts = trailing.count()
-    vol = trailing.std(ddof=1)
-
-    eligible = (
-        (valid_counts >= min_vol_observations)
-        & vol.notna()
-        & np.isfinite(vol)
-        & (vol > 0)
-    )
-
-    if not eligible.all():
-        excluded = list(eligible.index[~eligible])
-        raise ValueError(
-            "Volatilité impossible à estimer pour : "
-            + ", ".join(excluded)
-            + ". Augmenter l'historique ou réduire --min-vol-observations."
-        )
-
-    inverse_vol = 1.0 / vol
-    return inverse_vol / inverse_vol.sum()
-
-
 def get_rebalance_flags(
     dates: pd.DatetimeIndex,
     rebalance: str,
@@ -615,6 +488,29 @@ def get_rebalance_flags(
     flags.iloc[1:] = np.asarray(periods[1:] != periods[:-1])
 
     return flags
+
+
+def _resolve_target_weights(
+    weighting: str,
+    equal_weights: np.ndarray,
+    rolling_vol: pd.DataFrame | None,
+    asset_ids: list[str],
+    position: int,
+) -> np.ndarray:
+    """Poids cible à la date `position`, fondés sur la volatilité connue la veille (pas d'anticipation)."""
+    if weighting == "equal":
+        return equal_weights.copy()
+
+    vol = rolling_vol.iloc[position - 1].values  # type: ignore[union-attr]
+    if not (np.isfinite(vol).all() and (vol > 0).all()):
+        excluded = [asset_ids[i] for i, ok in enumerate(np.isfinite(vol) & (vol > 0)) if not ok]
+        raise ValueError(
+            "Volatilité impossible à estimer pour : "
+            + ", ".join(excluded)
+            + ". Augmenter l'historique ou réduire --min-vol-observations."
+        )
+    inv_vol = 1.0 / vol
+    return inv_vol / inv_vol.sum()
 
 
 def build_synthetic_index(
@@ -673,19 +569,9 @@ def build_synthetic_index(
                 invalid = [asset_ids[i] for i, v in enumerate(cur_prices) if v <= 0]
                 raise ValueError("Prix initial non positif pour : " + ", ".join(invalid))
 
-            if config.weighting == "equal":
-                target_w = equal_weights.copy()
-            else:
-                vol = rolling_vol.iloc[full_position - 1].values if full_position > 0 else rolling_vol.iloc[0].values  # type: ignore[union-attr]
-                if not (np.isfinite(vol).all() and (vol > 0).all()):
-                    excluded = [asset_ids[i] for i, ok in enumerate(np.isfinite(vol) & (vol > 0)) if not ok]
-                    raise ValueError(
-                        "Volatilité impossible à estimer pour : "
-                        + ", ".join(excluded)
-                        + ". Augmenter l'historique ou réduire --min-vol-observations."
-                    )
-                inv_vol = 1.0 / vol
-                target_w = inv_vol / inv_vol.sum()
+            target_w = _resolve_target_weights(
+                config.weighting, equal_weights, rolling_vol, asset_ids, full_position
+            )
 
             units_arr = config.base_value * target_w / cur_prices
             index_level = config.base_value
@@ -709,20 +595,9 @@ def build_synthetic_index(
                         date.date(),
                     )
                 else:
-                    if config.weighting == "equal":
-                        target_w = equal_weights.copy()
-                    else:
-                        prev_pos = full_position - 1
-                        vol = rolling_vol.iloc[prev_pos].values  # type: ignore[union-attr]
-                        if not (np.isfinite(vol).all() and (vol > 0).all()):
-                            excluded = [asset_ids[i] for i, ok in enumerate(np.isfinite(vol) & (vol > 0)) if not ok]
-                            raise ValueError(
-                                "Volatilité impossible à estimer pour : "
-                                + ", ".join(excluded)
-                                + ". Augmenter l'historique ou réduire --min-vol-observations."
-                            )
-                        inv_vol = 1.0 / vol
-                        target_w = inv_vol / inv_vol.sum()
+                    target_w = _resolve_target_weights(
+                        config.weighting, equal_weights, rolling_vol, asset_ids, full_position
+                    )
 
                     current_weights = position_values_before / gross_index_level
                     turnover = float(0.5 * np.abs(target_w - current_weights).sum())
