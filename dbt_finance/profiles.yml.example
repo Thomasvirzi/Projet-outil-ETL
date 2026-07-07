@@ -1,0 +1,12 @@
+dbt_finance:
+  target: dev
+  outputs:
+    dev:
+      type: bigquery
+      method: oauth
+      project: "{{ env_var('GOOGLE_CLOUD_PROJECT') }}"
+      dataset: dbt_finance
+      location: EU
+      threads: 4
+      timeout_seconds: 300
+      priority: interactive

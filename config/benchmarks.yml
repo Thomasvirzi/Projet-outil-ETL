@@ -1,8 +1,18 @@
-# Benchmarks provisoires.
-# À confirmer pendant l'étape 0 de cadrage.
+# Benchmarks du projet.
+#
+# Rôle métier :
+# - buy_and_hold : baseline passive par matière première.
+# - synthetic_index : indice de recherche construit à partir des matières du projet.
+# - global_external : proxy externe du marché global des commodities.
+#
+# Important :
+# L'indice synthétique utilise les séries continues Yahoo Finance. Il est utile
+# pour comparer les stratégies, mais ne représente pas un indice investissable
+# répliqué parfaitement avec roll de contrats futures.
 benchmarks:
-  global:
+  global_external:
     benchmark_id: global_dbc
+    benchmark_type: global_external
     symbol: DBC
     name: Invesco DB Commodity Index Tracking Fund
     category: diversified_commodities
@@ -11,5 +21,23 @@ benchmarks:
 
   buy_and_hold:
     enabled: true
+    benchmark_type: buy_and_hold
     benchmark_id_prefix: buy_hold
+    base_value: 100
     description: "Baseline passive calculée pour chaque matière première activée."
+
+  synthetic_index:
+    enabled: true
+    benchmark_id: synthetic_commodity_index
+    benchmark_type: synthetic_index
+    name: Synthetic Commodity Index
+    base_value: 100
+    weighting: equal
+    rebalance: monthly
+    vol_lookback: 60
+    min_vol_observations: 20
+    transaction_cost_bps: 0
+    annual_risk_free_rate: 0
+    max_forward_fill: 2
+    price_field: close
+    description: "Indice synthétique de recherche construit sur les matières premières sélectionnées."

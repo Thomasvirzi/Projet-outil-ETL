@@ -1,0 +1,131 @@
+version: 2
+
+models:
+  - name: mart_strategy_signals
+    description: Signaux finaux exposés au dashboard et au backtesting.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - strategy_name
+            - symbol
+            - date
+    columns:
+      - name: signal
+        tests:
+          - accepted_values:
+              values: [-1, 0, 1]
+              quote: false
+
+  - name: mart_backtest_trades
+    description: Événements de changement de position.
+    columns:
+      - name: trade_date
+        tests:
+          - not_null
+      - name: estimated_transaction_cost_rate
+        description: Coût estimé du trade exprimé en taux de rendement.
+      - name: estimated_fee
+        description: Frais estimés du trade exprimés en taux.
+      - name: estimated_slippage
+        description: Slippage estimé du trade exprimé en taux.
+      - name: trade_type
+        tests:
+          - accepted_values:
+              values: ['open', 'close', 'rebalance']
+
+  - name: mart_backtest_daily
+    description: Série quotidienne de performance de stratégie.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - strategy_name
+            - symbol
+            - date
+    columns:
+      - name: strategy_return
+        tests:
+          - not_null
+      - name: net_strategy_return
+        description: Rendement stratégie après coût estimé.
+      - name: cumulative_strategy_return
+        description: Rendement cumulé net de coûts.
+      - name: cumulative_asset_return
+        description: Rendement cumulé buy and hold du sous-jacent.
+      - name: cumulative_estimated_transaction_cost_rate
+        description: Somme cumulée des coûts estimés exprimés en taux.
+
+  - name: mart_strategy_metrics
+    description: Métriques agrégées de performance par stratégie et symbole.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - strategy_name
+            - symbol
+    columns:
+      - name: cumulative_return
+        description: Rendement cumulé net de coûts.
+      - name: annualized_return
+        description: Rendement annualisé.
+      - name: annualized_volatility
+        description: Volatilité annualisée.
+      - name: sharpe_ratio
+        description: Ratio de Sharpe simplifié sans taux sans risque.
+      - name: sortino_ratio
+        description: Ratio de Sortino basé sur la volatilité négative.
+      - name: max_drawdown
+        description: Maximum drawdown de la courbe de capital.
+      - name: calmar_ratio
+        description: Rendement annualisé divisé par le maximum drawdown absolu.
+      - name: win_rate
+        description: Part des jours gagnants parmi les jours avec rendement non nul.
+      - name: profit_factor
+        description: Somme des gains divisée par la valeur absolue des pertes.
+      - name: trade_count
+        description: Nombre de changements de position.
+      - name: avg_position_duration_days
+        description: Durée moyenne des périodes en position.
+      - name: total_estimated_fees
+        description: Somme des frais estimés exprimés en taux.
+      - name: outperformance_vs_buy_hold
+        description: Surperformance face au buy and hold du même instrument.
+      - name: outperformance_vs_global_benchmark
+        description: Surperformance face au benchmark global commodities.
+
+  - name: mart_dashboard_overview
+    description: Vue synthétique pour le dashboard Streamlit.
+    columns:
+      - name: symbol
+        tests:
+          - not_null
+      - name: latest_date
+        tests:
+          - not_null
+
+  - name: mart_validation_period_metrics
+    description: Métriques de stratégie découpées en calibration, validation et test final.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - validation_period
+            - strategy_name
+            - symbol
+    columns:
+      - name: validation_period
+        tests:
+          - accepted_values:
+              values: ['calibration', 'validation', 'test']
+      - name: is_optimization_allowed
+        description: Indique si la période peut servir au choix de paramètres.
+      - name: robust_selection_score
+        description: Score de sélection multi-critères évitant de choisir uniquement au rendement brut.
+
+  - name: mart_rss_filter_contribution
+    description: Comparaison technique seule contre technique enrichie par filtre RSS.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - validation_period
+            - symbol
+    columns:
+      - name: rss_adds_value
+        description: Vrai si le filtre RSS améliore rendement, Sharpe et drawdown.

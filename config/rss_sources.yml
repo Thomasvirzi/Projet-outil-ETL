@@ -1,20 +1,390 @@
-# Sources RSS provisoires.
-# Remplacer les URLs si une source retenue change pendant le cadrage.
+# Sources RSS retenues pour le MVP.
+#
+# Choix métier :
+# - S&P Global : qualité institutionnelle et couverture multi-commodities.
+# - Investing.com : volume, sentiment de marché et analyses.
+# - Barchart : futures, grains, metals, energy et soft commodities.
+# - CME Group : contexte futures listés CME/CBOT/NYMEX/COMEX.
+# - Nasdaq : complément généraliste commodities et contexte macro.
+#
+# Important :
+# Les flux RSS sont collectés en forward collection. Le backfill historique RSS
+# reste limité par la profondeur de chaque feed.
 rss_sources:
-  - name: Yahoo Finance Commodities
-    url: https://finance.yahoo.com/news/rssindex
-    category: finance
+  - source_id: spglobal_commodity_insights
+    feed_id: spglobal_oil
+    name: S&P Global - Latest Oil Headlines
+    source_name: S&P Global Commodity Insights
+    url: https://www.spglobal.com/commodityinsights/en/rss-feed/oil
+    category: oil
     language: en
-    enabled: true
+    priority: 1
+    quality: very_high
+    coverage: [oil, energy]
+    recommended_use: [supply_shock_score, geopolitical_risk_score, news_pressure_score, demand_shock_score]
+    requires_deduplication: true
+    enabled: false  # 403 Forbidden sans accès/API S&P Global; garder en référence mais ne pas collecter par défaut.
 
-  - name: Investing Commodities News
-    url: https://www.investing.com/rss/news_11.rss
+  - source_id: spglobal_commodity_insights
+    feed_id: spglobal_natural_gas
+    name: S&P Global - Latest Natural Gas Headlines
+    source_name: S&P Global Commodity Insights
+    url: https://www.spglobal.com/commodityinsights/en/rss-feed/natural-gas
+    category: natural_gas
+    language: en
+    priority: 1
+    quality: very_high
+    coverage: [natural_gas, energy]
+    recommended_use: [supply_shock_score, geopolitical_risk_score, news_pressure_score, demand_shock_score]
+    requires_deduplication: true
+    enabled: false  # 403 Forbidden sans accès/API S&P Global; garder en référence mais ne pas collecter par défaut.
+
+  - source_id: spglobal_commodity_insights
+    feed_id: spglobal_lng
+    name: S&P Global - Latest LNG Headlines
+    source_name: S&P Global Commodity Insights
+    url: https://www.spglobal.com/commodityinsights/en/rss-feed/lng
+    category: lng
+    language: en
+    priority: 1
+    quality: very_high
+    coverage: [lng, natural_gas, energy]
+    recommended_use: [supply_shock_score, geopolitical_risk_score, news_pressure_score, demand_shock_score]
+    requires_deduplication: true
+    enabled: false  # 403 Forbidden sans accès/API S&P Global; garder en référence mais ne pas collecter par défaut.
+
+  - source_id: spglobal_commodity_insights
+    feed_id: spglobal_metals
+    name: S&P Global - Latest Metals Headlines
+    source_name: S&P Global Commodity Insights
+    url: https://www.spglobal.com/commodityinsights/en/rss-feed/metals
+    category: metals
+    language: en
+    priority: 1
+    quality: very_high
+    coverage: [metals, precious_metals, industrial_metals]
+    recommended_use: [supply_shock_score, geopolitical_risk_score, news_pressure_score, demand_shock_score]
+    requires_deduplication: true
+    enabled: false  # 403 Forbidden sans accès/API S&P Global; garder en référence mais ne pas collecter par défaut.
+
+  - source_id: spglobal_commodity_insights
+    feed_id: spglobal_agriculture
+    name: S&P Global - Latest Agriculture Headlines
+    source_name: S&P Global Commodity Insights
+    url: https://www.spglobal.com/commodityinsights/en/rss-feed/agriculture
+    category: agriculture
+    language: en
+    priority: 1
+    quality: very_high
+    coverage: [agriculture, grains, soft_commodities]
+    recommended_use: [supply_shock_score, geopolitical_risk_score, news_pressure_score, demand_shock_score]
+    requires_deduplication: true
+    enabled: false  # 403 Forbidden sans accès/API S&P Global; garder en référence mais ne pas collecter par défaut.
+
+  - source_id: spglobal_commodity_insights
+    feed_id: spglobal_energy_transition
+    name: S&P Global - Energy Transition Headlines
+    source_name: S&P Global Commodity Insights
+    url: https://www.spglobal.com/commodityinsights/en/rss-feed/energy-transition
+    category: energy_transition
+    language: en
+    priority: 1
+    quality: very_high
+    coverage: [energy_transition, metals, energy]
+    recommended_use: [supply_shock_score, geopolitical_risk_score, news_pressure_score, demand_shock_score]
+    requires_deduplication: true
+    enabled: false  # 403 Forbidden sans accès/API S&P Global; garder en référence mais ne pas collecter par défaut.
+
+  - source_id: investing_commodities
+    feed_id: investing_commodities_analysis
+    name: Investing.com - Commodities Analysis & Opinion
+    source_name: Investing.com Commodities
+    url: https://www.investing.com/rss/commodities.rss
     category: commodities
     language: en
+    priority: 2
+    quality: high
+    coverage: [oil, gold, silver, copper, natural_gas, grains, soft_commodities]
+    recommended_use: [sentiment_score, news_pressure_score, sentiment_dispersion, news_surprise_20d]
+    requires_deduplication: true
     enabled: true
 
-  - name: OilPrice News
-    url: https://oilprice.com/rss/main
+  - source_id: investing_commodities
+    feed_id: investing_commodities_technical
+    name: Investing.com - Commodities Technical Analysis
+    source_name: Investing.com Commodities
+    url: https://www.investing.com/rss/commodities_Technical.rss
+    category: commodities_technical
+    language: en
+    priority: 2
+    quality: high
+    coverage: [commodities, technical_analysis]
+    recommended_use: [sentiment_score, news_pressure_score, sentiment_dispersion, news_surprise_20d]
+    requires_deduplication: true
+    enabled: true
+
+  - source_id: investing_commodities
+    feed_id: investing_commodities_fundamental
+    name: Investing.com - Commodities Fundamental Analysis
+    source_name: Investing.com Commodities
+    url: https://www.investing.com/rss/commodities_Fundamental.rss
+    category: commodities_fundamental
+    language: en
+    priority: 2
+    quality: high
+    coverage: [commodities, fundamental_analysis]
+    recommended_use: [sentiment_score, news_pressure_score, sentiment_dispersion, news_surprise_20d]
+    requires_deduplication: true
+    enabled: true
+
+  - source_id: investing_commodities
+    feed_id: investing_commodities_opinion
+    name: Investing.com - Commodities Opinion
+    source_name: Investing.com Commodities
+    url: https://www.investing.com/rss/commodities_Opinion.rss
+    category: commodities_opinion
+    language: en
+    priority: 2
+    quality: high
+    coverage: [commodities, market_opinion]
+    recommended_use: [sentiment_score, news_pressure_score, sentiment_dispersion, news_surprise_20d]
+    requires_deduplication: true
+    enabled: true
+
+  - source_id: investing_commodities
+    feed_id: investing_commodities_strategy
+    name: Investing.com - Commodities Strategy
+    source_name: Investing.com Commodities
+    url: https://www.investing.com/rss/commodities_Strategy.rss
+    category: commodities_strategy
+    language: en
+    priority: 2
+    quality: high
+    coverage: [commodities, strategy]
+    recommended_use: [sentiment_score, news_pressure_score, sentiment_dispersion, news_surprise_20d]
+    requires_deduplication: true
+    enabled: true
+
+  - source_id: investing_commodities
+    feed_id: investing_metals
+    name: Investing.com - Metals Analysis
+    source_name: Investing.com Commodities
+    url: https://www.investing.com/rss/commodities_Metals.rss
+    category: metals
+    language: en
+    priority: 2
+    quality: high
+    coverage: [gold, silver, copper, metals]
+    recommended_use: [sentiment_score, news_pressure_score, sentiment_dispersion, news_surprise_20d]
+    requires_deduplication: true
+    enabled: true
+
+  - source_id: investing_commodities
+    feed_id: investing_energy
+    name: Investing.com - Energy Analysis
+    source_name: Investing.com Commodities
+    url: https://www.investing.com/rss/commodities_Energy.rss
     category: energy
     language: en
+    priority: 2
+    quality: high
+    coverage: [oil, natural_gas, energy]
+    recommended_use: [sentiment_score, news_pressure_score, sentiment_dispersion, news_surprise_20d]
+    requires_deduplication: true
+    enabled: true
+
+  - source_id: investing_commodities
+    feed_id: investing_agriculture
+    name: Investing.com - Agriculture Analysis
+    source_name: Investing.com Commodities
+    url: https://www.investing.com/rss/commodities_Agriculture.rss
+    category: agriculture
+    language: en
+    priority: 2
+    quality: high
+    coverage: [grains, soft_commodities, agriculture]
+    recommended_use: [sentiment_score, news_pressure_score, sentiment_dispersion, news_surprise_20d]
+    requires_deduplication: true
+    enabled: true
+
+  - source_id: investing_commodities
+    feed_id: investing_commodities_news
+    name: Investing.com - Commodities & Futures News
+    source_name: Investing.com Commodities
+    url: https://www.investing.com/rss/news_11.rss
+    category: commodities_news
+    language: en
+    priority: 2
+    quality: high
+    coverage: [commodities, futures]
+    recommended_use: [sentiment_score, news_pressure_score, sentiment_dispersion, news_surprise_20d]
+    requires_deduplication: true
+    enabled: true
+
+  - source_id: barchart_commodities
+    feed_id: barchart_all_commodities
+    name: Barchart - All Commodity News
+    source_name: Barchart Commodity News
+    url: https://www.barchart.com/news/rss/commodities
+    category: commodities
+    language: en
+    priority: 3
+    quality: high
+    coverage: [energy, grains, metals, softs, livestock]
+    recommended_use: [news_pressure_score, sentiment_score, supply_shock_score, price_pressure_score]
+    requires_deduplication: true
+    enabled: true
+
+  - source_id: barchart_commodities
+    feed_id: barchart_energy
+    name: Barchart - Energy News
+    source_name: Barchart Commodity News
+    url: https://www.barchart.com/news/rss/commodities/energy
+    category: energy
+    language: en
+    priority: 3
+    quality: high
+    coverage: [energy, oil, natural_gas]
+    recommended_use: [news_pressure_score, sentiment_score, supply_shock_score, price_pressure_score]
+    requires_deduplication: true
+    enabled: true
+
+  - source_id: barchart_commodities
+    feed_id: barchart_grain
+    name: Barchart - Grain News
+    source_name: Barchart Commodity News
+    url: https://www.barchart.com/news/rss/commodities/grain
+    category: grains
+    language: en
+    priority: 3
+    quality: high
+    coverage: [grains, corn, wheat, soybeans]
+    recommended_use: [news_pressure_score, sentiment_score, supply_shock_score, price_pressure_score]
+    requires_deduplication: true
+    enabled: true
+
+  - source_id: barchart_commodities
+    feed_id: barchart_metals
+    name: Barchart - Metal News
+    source_name: Barchart Commodity News
+    url: https://www.barchart.com/news/rss/commodities/metals
+    category: metals
+    language: en
+    priority: 3
+    quality: high
+    coverage: [metals, gold, silver, copper]
+    recommended_use: [news_pressure_score, sentiment_score, supply_shock_score, price_pressure_score]
+    requires_deduplication: true
+    enabled: true
+
+  - source_id: barchart_commodities
+    feed_id: barchart_softs
+    name: Barchart - Softs News
+    source_name: Barchart Commodity News
+    url: https://www.barchart.com/news/rss/commodities/softs
+    category: softs
+    language: en
+    priority: 3
+    quality: high
+    coverage: [softs, cocoa, coffee, sugar, cotton]
+    recommended_use: [news_pressure_score, sentiment_score, supply_shock_score, price_pressure_score]
+    requires_deduplication: true
+    enabled: true
+
+  - source_id: cme_group
+    feed_id: cme_agriculture_releases
+    name: CME Group - Agriculture Economic Releases
+    source_name: CME Group RSS
+    url: https://feeds.feedburner.com/cmegroup/Ag
+    category: agriculture
+    language: en
+    priority: 4
+    quality: high
+    coverage: [agriculture, grains, livestock]
+    recommended_use: [market_commentary_score, news_pressure_score, volatility_context_score, futures_market_score]
+    requires_deduplication: false
+    enabled: false  # 404 Not Found; garder en référence mais ne pas collecter par défaut.
+
+  - source_id: cme_group
+    feed_id: cme_energy_releases
+    name: CME Group - Energy Economic Releases
+    source_name: CME Group RSS
+    url: https://feeds.feedburner.com/cmegroup/Energy
+    category: energy
+    language: en
+    priority: 4
+    quality: high
+    coverage: [energy, oil, natural_gas]
+    recommended_use: [market_commentary_score, news_pressure_score, volatility_context_score, futures_market_score]
+    requires_deduplication: false
+    enabled: false  # 404 Not Found; garder en référence mais ne pas collecter par défaut.
+
+  - source_id: cme_group
+    feed_id: cme_all_daily_videos
+    name: CME Group - All Daily Videos
+    source_name: CME Group RSS
+    url: https://www.cmegroup.com/rss/all-daily-videos.rss
+    category: futures_commentary
+    language: en
+    priority: 4
+    quality: high
+    coverage: [futures, market_commentary]
+    recommended_use: [market_commentary_score, news_pressure_score, volatility_context_score, futures_market_score]
+    requires_deduplication: false
+    enabled: false  # 404 Not Found; garder en référence mais ne pas collecter par défaut.
+
+  - source_id: cme_group
+    feed_id: cme_grains_video_commentary
+    name: CME Group - Grains Video Commentary
+    source_name: CME Group RSS
+    url: https://www.cmegroup.com/rss/grains-video-commentary.rss
+    category: grains
+    language: en
+    priority: 4
+    quality: high
+    coverage: [grains, market_commentary]
+    recommended_use: [market_commentary_score, news_pressure_score, volatility_context_score, futures_market_score]
+    requires_deduplication: false
+    enabled: true
+
+  - source_id: cme_group
+    feed_id: cme_energy_video_commentary
+    name: CME Group - Energy Video Commentary
+    source_name: CME Group RSS
+    url: https://www.cmegroup.com/rss/energy-video-commentary.rss
+    category: energy
+    language: en
+    priority: 4
+    quality: high
+    coverage: [energy, market_commentary]
+    recommended_use: [market_commentary_score, news_pressure_score, volatility_context_score, futures_market_score]
+    requires_deduplication: false
+    enabled: true
+
+  - source_id: cme_group
+    feed_id: cme_metals_video_commentary
+    name: CME Group - Metals Video Commentary
+    source_name: CME Group RSS
+    url: https://www.cmegroup.com/rss/metals-video-commentary.rss
+    category: metals
+    language: en
+    priority: 4
+    quality: high
+    coverage: [metals, market_commentary]
+    recommended_use: [market_commentary_score, news_pressure_score, volatility_context_score, futures_market_score]
+    requires_deduplication: false
+    enabled: true
+
+  - source_id: nasdaq_commodities
+    feed_id: nasdaq_commodities
+    name: Nasdaq - Commodities
+    source_name: Nasdaq Commodities
+    url: https://www.nasdaq.com/feed/rssoutbound?category=Commodities
+    category: commodities_general
+    language: en
+    priority: 5
+    quality: medium_high
+    coverage: [commodities_general, metals, energy, agriculture, macro_market_context]
+    recommended_use: [news_pressure_score, macro_context_score, sentiment_score]
+    requires_deduplication: true
     enabled: true

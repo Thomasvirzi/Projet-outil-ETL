@@ -24,6 +24,8 @@ env/
 *.json
 service-account*.json
 credentials*.json
+credentials/
+secrets/
 
 # Terraform
 .terraform/

@@ -141,6 +141,13 @@ def validate_project_config(config: ProjectConfig) -> None:
         joined_sections = ", ".join(missing_sections)
         raise ConfigError(f"Missing settings sections: {joined_sections}")
 
+    commodity_ids = [
+        commodity.get("commodity_id")
+        for commodity in config.commodities.get("commodities", [])
+    ]
+    if len(commodity_ids) != len(set(commodity_ids)):
+        raise ConfigError("Commodity IDs must be unique.")
+
     commodity_symbols = [
         commodity.get("symbol")
         for commodity in config.commodities.get("commodities", [])

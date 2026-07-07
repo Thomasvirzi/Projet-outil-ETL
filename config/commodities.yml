@@ -1,6 +1,3 @@
-# Univers des matières premières.
-# Les priorités A et B sont activées pour rester dans le périmètre MVP de 10 à 15 instruments.
-# Les priorités C restent documentées mais désactivées par défaut.
 commodities:
   - commodity_id: WTI
     symbol: CL=F
@@ -143,7 +140,7 @@ commodities:
     currency: USD
     source: yahoo_finance
     rss_query: '"platinum price" OR "platinum supply" OR "South Africa platinum" OR hydrogen'
-    enabled: false
+    enabled: true
 
   - commodity_id: PALLADIUM
     symbol: PA=F
@@ -154,7 +151,7 @@ commodities:
     currency: USD
     source: yahoo_finance
     rss_query: '"palladium price" OR "palladium supply" OR "Russia palladium" OR autocatalyst'
-    enabled: false
+    enabled: true
 
   - commodity_id: COTTON
     symbol: CT=F
@@ -165,7 +162,7 @@ commodities:
     currency: USD
     source: yahoo_finance
     rss_query: '"cotton prices" OR "cotton crop" OR "cotton harvest" OR "China cotton"'
-    enabled: false
+    enabled: true
 
   - commodity_id: ORANGE_JUICE
     symbol: OJ=F
@@ -176,7 +173,7 @@ commodities:
     currency: USD
     source: yahoo_finance
     rss_query: '"orange juice" OR "citrus crop" OR "Florida citrus" OR "Brazil orange" OR "citrus greening"'
-    enabled: false
+    enabled: true
 
   - commodity_id: ROUGH_RICE
     symbol: ZR=F
@@ -187,7 +184,7 @@ commodities:
     currency: USD
     source: yahoo_finance
     rss_query: '"rice prices" OR "rice exports" OR "rice harvest" OR "rice reserves" OR "India rice ban"'
-    enabled: false
+    enabled: true
 
   - commodity_id: LUMBER
     symbol: LBR=F
@@ -198,7 +195,7 @@ commodities:
     currency: USD
     source: yahoo_finance
     rss_query: '"lumber prices" OR "lumber futures" OR "housing starts" OR "softwood lumber" OR "Canada lumber"'
-    enabled: false
+    enabled: true
 
   - commodity_id: OLIVE_OIL_PROXY
     symbol: CBO.AX
@@ -209,7 +206,7 @@ commodities:
     currency: AUD
     source: yahoo_finance
     rss_query: '"olive oil prices" OR "olive harvest" OR "olive crop" OR "Spain olive" OR "drought olive"'
-    enabled: false
+    enabled: true
 
   - commodity_id: LITHIUM_HYDROXIDE
     symbol: LTH=F
@@ -220,4 +217,4 @@ commodities:
     currency: USD
     source: yahoo_finance
     rss_query: '"lithium hydroxide" OR "lithium price" OR "battery metals" OR "EV lithium demand" OR "lithium supply"'
-    enabled: false
+    enabled: true

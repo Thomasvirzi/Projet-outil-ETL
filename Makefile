@@ -1,11 +1,17 @@
-PYTHON ?= python3
-PIP ?= pip
+PYTHON := $(shell command -v python 2>/dev/null || command -v python3)
+PIP := $(PYTHON) -m pip
 DBT_DIR := dbt_finance
+DBT_PROFILES_DIR := .
 TF_DIR := infrastructure
+STREAMLIT_ADDRESS ?= localhost
+STREAMLIT_PORT ?= 8501
 
-.PHONY: install infra-init infra-validate infra-plan infra-apply infra-destroy ingest dbt-run dbt-test backtest dashboard test
+.PHONY: check-python install infra-init infra-validate infra-plan infra-apply infra-destroy ingest nlp nlp-mock orchestrate schedule dbt-deps dbt-ensure-raw dbt-run dbt-build dbt-test backtest dashboard security-audit test
 
-install:
+check-python:
+	$(PYTHON) scripts/check_python_version.py
+
+install: check-python
 	$(PIP) install -r requirements/requirements.txt
 
 infra-init:
@@ -23,20 +29,51 @@ infra-apply:
 infra-destroy:
 	terraform -chdir=$(TF_DIR) destroy -var-file=environments/dev.tfvars
 
-ingest:
+ingest: check-python
 	$(PYTHON) scripts/orchestrate.py --only ingest
 
-dbt-run:
-	cd $(DBT_DIR) && dbt run
+nlp: check-python
+	$(PYTHON) scripts/orchestrate.py --only nlp
 
-dbt-test:
-	cd $(DBT_DIR) && dbt test
+nlp-mock: check-python
+	$(PYTHON) scripts/nlp/create_embeddings.py --mock-embeddings
+	$(PYTHON) scripts/nlp/compute_sentiment.py --mock-sentiment
+	$(PYTHON) scripts/nlp/compute_relevance.py --mock-embeddings
+	$(PYTHON) scripts/nlp/compute_news_indicators.py
 
-backtest:
+orchestrate: check-python
+	$(PYTHON) scripts/orchestrate.py
+
+schedule: check-python
+	$(PYTHON) scripts/orchestrate.py --schedule
+
+dbt-deps: check-python
+	cd $(DBT_DIR) && dbt deps --profiles-dir $(DBT_PROFILES_DIR)
+
+dbt-ensure-raw: check-python
+	$(PYTHON) scripts/extract_load/ensure_raw_tables.py
+
+dbt-run: check-python
+	$(PYTHON) scripts/extract_load/ensure_raw_tables.py
+	cd $(DBT_DIR) && dbt run --profiles-dir $(DBT_PROFILES_DIR)
+
+dbt-build: check-python
+	$(PYTHON) scripts/extract_load/ensure_raw_tables.py
+	cd $(DBT_DIR) && dbt build --profiles-dir $(DBT_PROFILES_DIR)
+
+dbt-test: check-python
+	$(PYTHON) scripts/extract_load/ensure_raw_tables.py
+	cd $(DBT_DIR) && dbt test --profiles-dir $(DBT_PROFILES_DIR)
+
+backtest: check-python
 	$(PYTHON) -m backtesting.engine
 
-dashboard:
-	streamlit run dashboard/app.py
+dashboard: check-python
+	@echo "Dashboard URL: http://$(STREAMLIT_ADDRESS):$(STREAMLIT_PORT)"
+	PYTHONPATH=$(CURDIR) streamlit run dashboard/app.py --server.address=$(STREAMLIT_ADDRESS) --server.port=$(STREAMLIT_PORT) --server.headless=false --browser.serverAddress=$(STREAMLIT_ADDRESS)
 
-test:
+security-audit: check-python
+	$(PYTHON) scripts/security_audit.py
+
+test: check-python
 	pytest

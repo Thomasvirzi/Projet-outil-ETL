@@ -29,3 +29,8 @@ strategies:
     news_pressure_threshold: 0
     novelty_threshold: 0.35
     relevance_threshold: 0.35
+
+  breakout_20d:
+    enabled: true
+    lookback: 20
+    exit_lookback: 10

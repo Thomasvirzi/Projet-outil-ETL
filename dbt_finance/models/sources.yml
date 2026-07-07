@@ -1,0 +1,100 @@
+version: 2
+
+sources:
+  - name: raw
+    database: "{{ target.project }}"
+    schema: "{{ var('raw_dataset', 'raw') }}"
+    tables:
+      - name: market_data_raw
+        description: Prix OHLCV bruts des matières premières.
+        loaded_at_field: ingested_at
+        freshness:
+          warn_after:
+            count: 2
+            period: day
+          error_after:
+            count: 7
+            period: day
+        columns:
+          - name: symbol
+            tests:
+              - not_null
+          - name: date
+            tests:
+              - not_null
+          - name: close
+            tests:
+              - not_null
+
+      - name: benchmarks_raw
+        description: Benchmarks Buy and Hold, synthetic index et proxy global.
+        loaded_at_field: ingested_at
+        columns:
+          - name: benchmark_id
+            tests:
+              - not_null
+          - name: date
+            tests:
+              - not_null
+
+      - name: news_raw
+        description: Articles RSS bruts nettoyés.
+        loaded_at_field: ingested_at
+        freshness:
+          warn_after:
+            count: 2
+            period: day
+          error_after:
+            count: 7
+            period: day
+        columns:
+          - name: article_id
+            tests:
+              - not_null
+              - unique
+          - name: title
+            tests:
+              - not_null
+
+      - name: news_embeddings_raw
+        description: Embeddings article générés par Sentence Transformers.
+        columns:
+          - name: article_id
+            tests:
+              - not_null
+          - name: embedding_model
+            tests:
+              - not_null
+
+      - name: news_sentiment_raw
+        description: Scores FinBERT et nouveauté par article.
+        columns:
+          - name: article_id
+            tests:
+              - not_null
+          - name: sentiment_score
+            tests:
+              - not_null
+
+      - name: article_commodity_relevance_raw
+        description: Similarités article-matière première.
+        columns:
+          - name: article_id
+            tests:
+              - not_null
+          - name: commodity_id
+            tests:
+              - not_null
+
+      - name: news_features_raw
+        description: Indicateurs textuels journaliers par matière première.
+        columns:
+          - name: commodity_id
+            tests:
+              - not_null
+          - name: date
+            tests:
+              - not_null
+
+      - name: pipeline_logs_raw
+        description: Logs bruts du pipeline.

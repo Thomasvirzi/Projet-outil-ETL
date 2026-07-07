@@ -1,0 +1,139 @@
+version: 2
+
+models:
+  - name: int_tradable_assets
+    description: Univers des actifs backtestables, incluant les matières premières et l'indice synthétique commodities.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - symbol
+            - date
+    columns:
+      - name: symbol
+        tests:
+          - not_null
+      - name: date
+        tests:
+          - not_null
+      - name: close
+        tests:
+          - not_null
+
+  - name: int_technical_indicators
+    description: Indicateurs techniques journaliers sans look-ahead.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - symbol
+            - date
+    columns:
+      - name: symbol
+        tests:
+          - not_null
+      - name: date
+        tests:
+          - not_null
+      - name: close
+        tests:
+          - not_null
+      - name: simple_return
+        description: Rendement simple journalier calculé avec le close précédent.
+      - name: log_return
+        description: Rendement logarithmique journalier calculé avec le close précédent.
+      - name: sma_20
+        description: Moyenne mobile simple 20 séances.
+      - name: sma_50
+        description: Moyenne mobile simple 50 séances.
+      - name: sma_100
+        description: Moyenne mobile simple 100 séances.
+      - name: sma_200
+        description: Moyenne mobile simple 200 séances.
+      - name: bollinger_upper_20d
+        description: Bande de Bollinger supérieure, SMA 20 plus deux écarts-types.
+      - name: bollinger_lower_20d
+        description: Bande de Bollinger inférieure, SMA 20 moins deux écarts-types.
+      - name: volume_ratio_20d
+        description: Ratio entre le volume courant et le volume moyen 20 séances.
+      - name: rsi_14
+        description: Relative Strength Index sur 14 séances.
+      - name: stochastic_rsi_k
+        description: Ligne K du Stochastic RSI sur 14 séances.
+      - name: stochastic_rsi_d
+        description: Ligne D du Stochastic RSI, moyenne mobile 3 séances de K.
+      - name: macd
+        description: Différence entre EMA 12 et EMA 26.
+      - name: macd_signal
+        description: Signal MACD, EMA 9 de la ligne MACD.
+      - name: macd_histogram
+        description: Écart entre MACD et son signal.
+      - name: atr_14
+        description: Average True Range sur 14 séances.
+      - name: volatility_20d
+        description: Volatilité historique journalière sur 20 séances.
+      - name: historical_volatility_20d
+        description: Volatilité historique 20 séances annualisée par racine de 252.
+
+  - name: int_article_commodity_relevance
+    description: Jointure entre articles, pertinence matière première et sentiment.
+    columns:
+      - name: article_id
+        tests:
+          - not_null
+      - name: commodity_id
+        tests:
+          - not_null
+
+  - name: int_commodity_news_features
+    description: Indicateurs textuels journaliers par matière première.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - commodity_id
+            - date
+    columns:
+      - name: commodity_id
+        tests:
+          - not_null
+      - name: date
+        tests:
+          - not_null
+      - name: news_pressure_score
+        tests:
+          - not_null
+      - name: news_acceleration
+        tests:
+          - not_null
+      - name: geopolitical_risk_score
+        tests:
+          - not_null
+      - name: supply_shock_score
+        tests:
+          - not_null
+      - name: weather_risk_score
+        tests:
+          - not_null
+
+  - name: int_strategy_signals
+    description: Signaux de stratégie combinant technique et news.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - strategy_name
+            - symbol
+            - date
+    columns:
+      - name: signal
+        tests:
+          - not_null
+          - accepted_values:
+              values: [-1, 0, 1]
+              quote: false
+
+  - name: int_daily_returns
+    description: Rendements journaliers avec position exécutée à J+1.
+    columns:
+      - name: executed_position
+        tests:
+          - accepted_values:
+              values: [-1, 0, 1]
+              quote: false

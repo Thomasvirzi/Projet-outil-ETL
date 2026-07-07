@@ -64,10 +64,10 @@ Le projet vise à collecter des données de marché et des actualités financiè
 
 ## Installation locale
 
-Créer un environnement virtuel :
+Créer un environnement virtuel avec Python 3.12 :
 
 ```bash
-python3 -m venv .venv
+python3.12 -m venv .venv
 source .venv/bin/activate
 ```
 
@@ -149,9 +149,22 @@ BigQuery dbt_finance / mart
 ## Documentation projet
 
 - `TASK.md` contient le backlog opérationnel.
+- `docs/documentation_finale.md` sert d'index final pour la soutenance.
+- `docs/installation_locale.md` explique l'installation locale.
+- `docs/architecture_globale.md` synthétise l'architecture.
 - `docs/flux_donnee.md` explique le trajet de la donnée, des APIs jusqu'au dashboard.
 - `docs/pedagogie.md` explique comment configurer Terraform avec Google Cloud BigQuery.
+- `docs/rapport_recette.md` synthétise la recette locale.
+- `docs/soutenance_slides.md` propose le plan des slides.
+- `docs/demo_streamlit.md` décrit le scénario de démonstration.
+- `docs/scenario_secours.md` prépare la démo de secours.
 - `Note de cadrage.md` décrit le périmètre et la méthodologie.
 - `Cahier des charges.md` décrit les exigences techniques.
 - `Cahier des charges fonctionnel.md` décrit les fonctions attendues.
 - `Backlog priorise.md` fournit le découpage initial des livrables.
+
+## Version stable
+
+La version stable MVP est indiquée dans `VERSION`.
+
+Les notes de version sont disponibles dans `RELEASE_NOTES.md`.
