@@ -60,6 +60,10 @@ exports/
 logs/**
 !logs/
 !logs/.gitkeep
+outputs/**
+!outputs/
+!outputs/**/
+!outputs/**/.gitkeep
 tmp/
 *.csv
 *.parquet

@@ -6,7 +6,7 @@ TF_DIR := infrastructure
 STREAMLIT_ADDRESS ?= localhost
 STREAMLIT_PORT ?= 8501
 
-.PHONY: check-python install infra-init infra-validate infra-plan infra-apply infra-destroy ingest nlp nlp-mock orchestrate schedule dbt-deps dbt-ensure-raw dbt-run dbt-build dbt-test backtest dashboard security-audit test
+.PHONY: check-python install infra-init infra-validate infra-plan infra-apply infra-destroy ingest nlp nlp-mock orchestrate schedule dbt-deps dbt-ensure-raw dbt-run dbt-build dbt-test backtest equities dashboard security-audit test
 
 check-python:
 	$(PYTHON) scripts/check_python_version.py
@@ -67,6 +67,9 @@ dbt-test: check-python
 
 backtest: check-python
 	$(PYTHON) -m backtesting.engine
+
+equities: check-python
+	$(PYTHON) scripts/extract_load/equities_trading.py
 
 dashboard: check-python
 	@echo "Dashboard URL: http://$(STREAMLIT_ADDRESS):$(STREAMLIT_PORT)"

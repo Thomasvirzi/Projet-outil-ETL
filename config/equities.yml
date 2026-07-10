@@ -1,0 +1,177 @@
+# Univers d'actions du projet.
+#
+# Rôle métier :
+# - equities : univers configurable d'actions individuelles suivies via yfinance.
+# - market_benchmark : indice de marché de référence (Buy & Hold), configurable.
+# - portfolio : paramètres par défaut du portefeuille agrégé (equal-weight / inverse-vol).
+#
+# Important :
+# Contrairement aux matières premières (contrats futures continus), les actions ont des
+# dividendes et des splits. Les calculs de rendement doivent utiliser les prix ajustés
+# (adjusted_close), pas le close brut.
+equities:
+  - equity_id: AAPL
+    ticker: AAPL
+    name: Apple
+    exchange: NASDAQ
+    currency: USD
+    enabled: true
+
+  - equity_id: NVDA
+    ticker: NVDA
+    name: Nvidia
+    exchange: NASDAQ
+    currency: USD
+    enabled: true
+
+  - equity_id: AMD
+    ticker: AMD
+    name: Advanced Micro Devices
+    exchange: NASDAQ
+    currency: USD
+    enabled: true
+
+  - equity_id: TSLA
+    ticker: TSLA
+    name: Tesla
+    exchange: NASDAQ
+    currency: USD
+    enabled: true
+
+  - equity_id: META
+    ticker: META
+    name: Meta Platforms
+    exchange: NASDAQ
+    currency: USD
+    enabled: true
+
+  - equity_id: AMZN
+    ticker: AMZN
+    name: Amazon
+    exchange: NASDAQ
+    currency: USD
+    enabled: true
+
+  - equity_id: GOOGL
+    ticker: GOOGL
+    name: Alphabet
+    exchange: NASDAQ
+    currency: USD
+    enabled: true
+
+  - equity_id: AVGO
+    ticker: AVGO
+    name: Broadcom
+    exchange: NASDAQ
+    currency: USD
+    enabled: true
+
+  - equity_id: JPM
+    ticker: JPM
+    name: JPMorgan Chase
+    exchange: NYSE
+    currency: USD
+    enabled: true
+
+  - equity_id: XOM
+    ticker: XOM
+    name: Exxon Mobil
+    exchange: NYSE
+    currency: USD
+    enabled: true
+
+  - equity_id: MSFT
+    ticker: MSFT
+    name: Microsoft
+    exchange: NASDAQ
+    currency: USD
+    enabled: true
+
+  - equity_id: NFLX
+    ticker: NFLX
+    name: Netflix
+    exchange: NASDAQ
+    currency: USD
+    enabled: true
+
+  - equity_id: ASML
+    ticker: ASML.AS
+    name: ASML
+    exchange: Euronext Amsterdam
+    currency: EUR
+    enabled: true
+
+  - equity_id: TTE
+    ticker: TTE.PA
+    name: TotalEnergies
+    exchange: Euronext Paris
+    currency: EUR
+    enabled: true
+
+  - equity_id: STM
+    ticker: STM.PA
+    name: STMicroelectronics
+    exchange: Euronext Paris
+    currency: EUR
+    enabled: true
+
+  - equity_id: BNP
+    ticker: BNP.PA
+    name: BNP Paribas
+    exchange: Euronext Paris
+    currency: EUR
+    enabled: true
+
+  - equity_id: GLE
+    ticker: GLE.PA
+    name: Société Générale
+    exchange: Euronext Paris
+    currency: EUR
+    enabled: true
+
+  - equity_id: AIR
+    ticker: AIR.PA
+    name: Airbus
+    exchange: Euronext Paris
+    currency: EUR
+    enabled: true
+
+  - equity_id: STLAM
+    ticker: STLAM.PA
+    name: Stellantis
+    exchange: Euronext Paris
+    currency: EUR
+    enabled: true
+
+  - equity_id: MC
+    ticker: MC.PA
+    name: LVMH
+    exchange: Euronext Paris
+    currency: EUR
+    enabled: true
+
+market_benchmark:
+  benchmark_id: SPY
+  ticker: SPY
+  name: SPDR S&P 500 ETF Trust
+  currency: USD
+  description: "Benchmark de marché configurable, Buy & Hold simple."
+
+portfolio:
+  reference_currency: EUR
+  allocation: equal
+  rebalance: monthly
+  max_position_weight: 0.15
+  max_positions: 20
+  cash_reserve: 0.0
+  allow_short: false
+  leverage: 1.0
+  vol_lookback: 60
+  min_vol_observations: 20
+  transaction_cost_bps: 0
+
+execution:
+  initial_capital: 10000
+  fee_rate: 0.001
+  slippage_rate: 0.0005
+  allow_short: false

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -19,6 +19,7 @@ CONFIG_FILES = {
     "rss_sources": "rss_sources.yml",
     "strategies": "strategies.yml",
     "settings": "settings.yml",
+    "equities": "equities.yml",
 }
 
 
@@ -43,6 +44,7 @@ class ProjectConfig:
     strategies: dict[str, Any]
     settings: dict[str, Any]
     environment: EnvironmentConfig
+    equities: dict[str, Any] = field(default_factory=dict)
 
     @property
     def enabled_commodities(self) -> list[dict[str, Any]]:
@@ -50,6 +52,14 @@ class ProjectConfig:
             commodity
             for commodity in self.commodities.get("commodities", [])
             if commodity.get("enabled", True)
+        ]
+
+    @property
+    def enabled_equities(self) -> list[dict[str, Any]]:
+        return [
+            equity
+            for equity in self.equities.get("equities", [])
+            if equity.get("enabled", True)
         ]
 
     @property
@@ -111,6 +121,7 @@ def load_project_config(config_dir: Path = CONFIG_DIR) -> ProjectConfig:
         rss_sources=configs["rss_sources"],
         strategies=configs["strategies"],
         settings=configs["settings"],
+        equities=configs["equities"],
         environment=load_environment(),
     )
 
@@ -161,6 +172,13 @@ def validate_project_config(config: ProjectConfig) -> None:
     ]
     if len(rss_names) != len(set(rss_names)):
         raise ConfigError("RSS source names must be unique.")
+
+    equity_tickers = [
+        equity.get("ticker")
+        for equity in config.equities.get("equities", [])
+    ]
+    if len(equity_tickers) != len(set(equity_tickers)):
+        raise ConfigError("Equity tickers must be unique.")
 
 
 def get_bigquery_table(config: ProjectConfig, table_key: str) -> str:

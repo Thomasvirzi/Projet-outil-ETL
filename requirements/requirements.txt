@@ -34,6 +34,9 @@ ta>=0.11.0
 streamlit>=1.36.0
 plotly>=5.22.0
 
+# Visualisation headless (export PNG sans dépendance kaleido) : équities_trading.py
+matplotlib>=3.8.0
+
 # Orchestration
 APScheduler>=3.10.4
 

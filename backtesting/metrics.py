@@ -210,3 +210,91 @@ def compare_backtest_results(
         ["benchmark_outperformance", "sharpe_ratio", "cumulative_return"],
         ascending=[False, False, False],
     )
+
+
+def compute_trade_returns(trades: pd.DataFrame) -> pd.Series:
+    """Realized return per sell, using a weighted-average-cost basis for the position.
+
+    Complements profit_factor/win_rate (computed on daily strategy returns) with a
+    trade-level view, for round-trip P&L reporting (e.g. "average return per trade").
+    """
+    if trades.empty or not {"date", "action", "quantity", "price", "fee"}.issubset(trades.columns):
+        return pd.Series(dtype=float)
+
+    ordered = trades.sort_values("date")
+    position = 0.0
+    cost_basis = 0.0
+    realized_returns: list[float] = []
+
+    for row in ordered.itertuples(index=False):
+        quantity = abs(float(row.quantity))
+        price = float(row.price)
+        fee = float(row.fee)
+
+        if row.action == "buy":
+            cost_basis += quantity * price + fee
+            position += quantity
+        elif row.action == "sell" and position > 1e-12:
+            sold_quantity = min(quantity, position)
+            sold_fraction = sold_quantity / position
+            allocated_cost = cost_basis * sold_fraction
+            proceeds = sold_quantity * price - fee
+            if allocated_cost > 0:
+                realized_returns.append(proceeds / allocated_cost - 1)
+            cost_basis -= allocated_cost
+            position -= sold_quantity
+
+    return pd.Series(realized_returns, dtype=float)
+
+
+def average_trade_return(trades: pd.DataFrame) -> float:
+    returns = compute_trade_returns(trades)
+    return float(returns.mean()) if not returns.empty else 0.0
+
+
+def trade_win_rate(trades: pd.DataFrame) -> float:
+    returns = compute_trade_returns(trades)
+    return win_rate(returns)
+
+
+def cumulative_fees(trades: pd.DataFrame) -> float:
+    if trades.empty or "fee" not in trades:
+        return 0.0
+    return float(trades["fee"].sum())
+
+
+def cumulative_slippage(trades: pd.DataFrame) -> float:
+    if trades.empty or "slippage" not in trades:
+        return 0.0
+    return float(trades["slippage"].sum())
+
+
+def average_exposure(daily_portfolio: pd.DataFrame) -> float:
+    if daily_portfolio.empty or "exposure" not in daily_portfolio:
+        return 0.0
+    return float(daily_portfolio["exposure"].mean())
+
+
+def turnover_ratio(trades: pd.DataFrame, daily_portfolio: pd.DataFrame) -> float:
+    """Ratio of total traded notional to average portfolio equity (not annualized)."""
+    if trades.empty or "gross_amount" not in trades:
+        return 0.0
+    if daily_portfolio.empty or "equity" not in daily_portfolio:
+        return 0.0
+
+    average_equity = daily_portfolio["equity"].mean()
+    if average_equity == 0:
+        return 0.0
+    return float(trades["gross_amount"].sum() / average_equity)
+
+
+def extended_trade_metrics(trades: pd.DataFrame, daily_portfolio: pd.DataFrame) -> dict[str, float]:
+    """Additional per-trade/exposure metrics not covered by summarize_backtest."""
+    return {
+        "average_trade_return": average_trade_return(trades),
+        "trade_win_rate": trade_win_rate(trades),
+        "total_fees": cumulative_fees(trades),
+        "total_slippage": cumulative_slippage(trades),
+        "average_exposure": average_exposure(daily_portfolio),
+        "turnover_ratio": turnover_ratio(trades, daily_portfolio),
+    }

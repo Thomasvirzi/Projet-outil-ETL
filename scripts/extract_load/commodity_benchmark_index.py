@@ -107,6 +107,9 @@ class IndexConfig:
     annual_risk_free_rate: float
     max_forward_fill: int
     price_field: str
+    # Optional per-position weight cap, defaulted to a no-op so existing commodity callers
+    # (this script and ingest_benchmarks.py) keep their current behaviour unchanged.
+    max_position_weight: float | None = None
 
 
 # ============================================================
@@ -490,27 +493,65 @@ def get_rebalance_flags(
     return flags
 
 
+def _cap_and_redistribute_weights(weights: np.ndarray, max_weight: float | None) -> np.ndarray:
+    """Clip weights above `max_weight` and redistribute the excess pro-rata to the rest.
+
+    No-op when `max_weight` is None, so existing callers that never set a cap are
+    unaffected. build_synthetic_index has no cash bucket — it assumes weights always sum to
+    1 — so a cap that cannot be satisfied by every asset (`max_weight * n_assets < 1`) would
+    silently under-invest and corrupt index_level on the next mark-to-market. Raise instead
+    of returning a sub-1 vector.
+    """
+    if max_weight is None:
+        return weights
+
+    if max_weight * len(weights) < 1.0 - 1e-9:
+        raise ValueError(
+            f"max_position_weight={max_weight} est trop restrictif pour {len(weights)} actifs "
+            f"(plafond total {max_weight * len(weights):.4f} < 1). Augmenter le plafond, "
+            "réduire le nombre d'actifs, ou désactiver le plafond."
+        )
+
+    capped = weights.copy()
+    for _ in range(len(capped)):
+        over = capped > max_weight
+        if not over.any():
+            break
+        excess = float((capped[over] - max_weight).sum())
+        capped[over] = max_weight
+        under = ~over
+        under_total = capped[under].sum()
+        if not under.any() or under_total <= 0:
+            break
+        capped[under] += excess * (capped[under] / under_total)
+
+    return capped
+
+
 def _resolve_target_weights(
     weighting: str,
     equal_weights: np.ndarray,
     rolling_vol: pd.DataFrame | None,
     asset_ids: list[str],
     position: int,
+    max_position_weight: float | None = None,
 ) -> np.ndarray:
     """Poids cible à la date `position`, fondés sur la volatilité connue la veille (pas d'anticipation)."""
     if weighting == "equal":
-        return equal_weights.copy()
+        weights = equal_weights.copy()
+    else:
+        vol = rolling_vol.iloc[position - 1].values  # type: ignore[union-attr]
+        if not (np.isfinite(vol).all() and (vol > 0).all()):
+            excluded = [asset_ids[i] for i, ok in enumerate(np.isfinite(vol) & (vol > 0)) if not ok]
+            raise ValueError(
+                "Volatilité impossible à estimer pour : "
+                + ", ".join(excluded)
+                + ". Augmenter l'historique ou réduire --min-vol-observations."
+            )
+        inv_vol = 1.0 / vol
+        weights = inv_vol / inv_vol.sum()
 
-    vol = rolling_vol.iloc[position - 1].values  # type: ignore[union-attr]
-    if not (np.isfinite(vol).all() and (vol > 0).all()):
-        excluded = [asset_ids[i] for i, ok in enumerate(np.isfinite(vol) & (vol > 0)) if not ok]
-        raise ValueError(
-            "Volatilité impossible à estimer pour : "
-            + ", ".join(excluded)
-            + ". Augmenter l'historique ou réduire --min-vol-observations."
-        )
-    inv_vol = 1.0 / vol
-    return inv_vol / inv_vol.sum()
+    return _cap_and_redistribute_weights(weights, max_position_weight)
 
 
 def build_synthetic_index(
@@ -570,7 +611,8 @@ def build_synthetic_index(
                 raise ValueError("Prix initial non positif pour : " + ", ".join(invalid))
 
             target_w = _resolve_target_weights(
-                config.weighting, equal_weights, rolling_vol, asset_ids, full_position
+                config.weighting, equal_weights, rolling_vol, asset_ids, full_position,
+                config.max_position_weight,
             )
 
             units_arr = config.base_value * target_w / cur_prices
@@ -596,7 +638,8 @@ def build_synthetic_index(
                     )
                 else:
                     target_w = _resolve_target_weights(
-                        config.weighting, equal_weights, rolling_vol, asset_ids, full_position
+                        config.weighting, equal_weights, rolling_vol, asset_ids, full_position,
+                        config.max_position_weight,
                     )
 
                     current_weights = position_values_before / gross_index_level

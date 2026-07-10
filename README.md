@@ -136,6 +136,31 @@ BigQuery dbt_finance / mart
         └── Streamlit
 ```
 
+## Univers actions (équités)
+
+En plus des matières premières, le projet fournit une pipeline autonome de backtesting sur
+un univers de 20 actions (`config/equities.yml`), réutilisant le moteur de backtesting
+(`backtesting/`) et les fonctions de construction de benchmark déjà utilisées pour les
+matières premières (`scripts/extract_load/commodity_benchmark_index.py`). Contrairement à la
+pipeline matières premières, elle ne dépend pas de BigQuery/dbt : tout tourne en local à
+partir de yfinance.
+
+```bash
+python scripts/extract_load/equities_trading.py \
+  --start 2015-01-01 --end 2026-01-01 --capital 10000 \
+  --commission 0.001 --slippage 0.0005 --rebalance monthly
+
+# Sous-ensemble de tickers
+python scripts/extract_load/equities_trading.py --tickers AAPL NVDA ASML.AS
+
+# ou via make
+make equities
+```
+
+Résultats exportés dans `outputs/equities/` (prix nettoyés, validation des tickers, rapport
+qualité, backtests individuels, benchmarks, portefeuille, trades, courbes de capital,
+graphiques PNG dans `outputs/equities/charts/`). Détails dans `docs/equities_pipeline.md`.
+
 ## Règles importantes
 
 - Aucune donnée future ne doit être utilisée dans les signaux.
@@ -158,6 +183,7 @@ BigQuery dbt_finance / mart
 - `docs/soutenance_slides.md` propose le plan des slides.
 - `docs/demo_streamlit.md` décrit le scénario de démonstration.
 - `docs/scenario_secours.md` prépare la démo de secours.
+- `docs/equities_pipeline.md` documente la pipeline actions (univers, stratégies, benchmarks, devises).
 - `Note de cadrage.md` décrit le périmètre et la méthodologie.
 - `Cahier des charges.md` décrit les exigences techniques.
 - `Cahier des charges fonctionnel.md` décrit les fonctions attendues.
